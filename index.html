@@ -1,419 +1,659 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8">
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="dark"><title>FOMO · en vivo</title>
+<meta name="color-scheme" content="dark">
+<title>FOMO · Terminal en Vivo</title>
 <style>
-:root{--bg:#08070d;--pa:#141120;--pa2:#1b1729;--li:#2b2440;--tx:#eae6f5;--di:#8b83a8;
---ac:#ff2d95;--ok:#31d68a;--bad:#ff4d6d;--wa:#ffb020;--mo:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+:root{
+  --bg:#07060b; --bg-grad:radial-gradient(1400px 700px at 85% -10%,#1c1032 0%,#07060b 65%);
+  --pa:#110e1b; --pa2:#181426; --li:#2a2342; --li-hi:#3d3360;
+  --tx:#ece8f8; --di:#8e86ad; --ac:#ff2d95; --ac-glow:rgba(255,45,149,.25);
+  --ok:#2ee59d; --ok-bg:rgba(46,229,157,.10);
+  --bad:#ff4d6d; --bad-bg:rgba(255,77,109,.10);
+  --wa:#ffb020; --wa-bg:rgba(255,176,32,.10);
+  --mo:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+}
 *{box-sizing:border-box}
-body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#1d1030 0,var(--bg) 60%);
-color:var(--tx);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
--webkit-text-size-adjust:100%}
-.w{max-width:1080px;margin:0 auto;padding:14px 12px 70px}
-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;
-border-bottom:2px solid var(--ac);padding-bottom:8px;margin-bottom:6px}
-h1{font-size:16px;margin:0;letter-spacing:.16em;text-transform:uppercase}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--pa);border-radius:4px}
+::-webkit-scrollbar-thumb{background:var(--li-hi);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--ac)}
+body{
+  margin:0;background:var(--bg-grad);background-attachment:fixed;color:var(--tx);
+  font:13.5px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%;overflow-x:hidden;
+}
+.w{max-width:1440px;margin:0 auto;padding:12px 14px 60px}
+header{
+  position:sticky;top:0;z-index:30;background:rgba(11,9,18,.9);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--li);border-bottom:2px solid var(--ac);border-radius:12px;
+  padding:9px 13px;margin-bottom:12px;display:flex;justify-content:space-between;
+  align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 8px 30px rgba(0,0,0,.45)
+}
+.brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:15px;margin:0;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
 h1 i{color:var(--ac);font-style:normal}
-.s{color:var(--di);font-size:11.5px}
+.badge-mode{font:600 10px var(--mo);text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;
+  border-radius:6px;background:rgba(255,45,149,.14);border:1px solid var(--ac);color:#ff85c0}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-pill{display:flex;align-items:center;gap:7px;background:var(--pa2);border:1px solid var(--li);
+  padding:5px 10px;border-radius:8px;font-size:11.5px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);
-margin-right:6px;box-shadow:0 0 0 0 rgba(49,214,138,.7);animation:pulse 2.4s infinite}
-@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(49,214,138,.55)}70%{box-shadow:0 0 0 10px rgba(49,214,138,0)}
-100%{box-shadow:0 0 0 0 rgba(49,214,138,0)}}
-h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--di);margin:24px 0 7px;
-border-left:3px solid var(--ac);padding-left:8px}
-.p{background:linear-gradient(180deg,var(--pa2),var(--pa));border:1px solid var(--li);
-border-radius:10px;padding:11px 13px}
-.g{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{text-align:left;color:var(--di);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
-border-bottom:1px solid var(--li);padding:5px 5px;white-space:nowrap}
-/* Numeric columns: the header must sit on the SAME side as the values. With th left and td.num
-   right, a wide table on an ultrawide screen pushes the number to the far right of its cell
-   while the label stays at the far left, and the row reads as if the numbers belong to the
-   neighbouring column. */
+  box-shadow:0 0 0 0 rgba(46,229,157,.7);animation:pulse 2.2s infinite}
+.dot.stale{background:var(--wa);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,229,157,.65)}70%{box-shadow:0 0 0 9px rgba(46,229,157,0)}100%{box-shadow:0 0 0 0 rgba(46,229,157,0)}}
+.btn-icon{background:var(--pa2);border:1px solid var(--li);color:var(--tx);padding:5px 10px;
+  border-radius:8px;font:11px var(--mo);cursor:pointer}
+.btn-icon:hover{border-color:var(--ac);color:#fff}
+.refresh-track{width:100%;height:2px;background:rgba(255,255,255,.04);overflow:hidden;margin-top:4px;border-radius:2px}
+.refresh-bar{height:100%;width:0%;background:linear-gradient(90deg,var(--ac),var(--ok));transition:width 1s linear}
+.s{color:var(--di);font-size:11.5px}
+h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--di);margin:18px 0 8px;
+  border-left:3px solid var(--ac);padding-left:8px;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;flex-wrap:wrap}
+.p{background:linear-gradient(180deg,var(--pa2),var(--pa));border:1px solid var(--li);border-radius:12px;
+  padding:12px 14px;box-shadow:0 4px 20px rgba(0,0,0,.28);min-width:0}
+.p:hover{border-color:var(--li-hi)}
+/* min(...,100%) y minmax(0,...): un ítem de rejilla con una tabla ancha dentro no puede encogerse
+   por debajo del min-content de la tabla (overflow:auto NO reduce el min-content de un bloque), asi
+   que en un movil de 390 px la rejilla se iba a 505 px y la pagina entera hacia scroll de lado.
+   Medido con iframes de 390 y 320 px: 505 -> 390 con esto. */
+.g-kpi{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))}
+.g-books{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(430px,100%),1fr));align-items:start}
+.g-bottom{display:grid;gap:12px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}
+@media (max-width:960px){.g-books,.g-bottom{grid-template-columns:minmax(0,1fr)}}
+.scroll-box{max-height:340px;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid #221c35;border-radius:8px;background:rgba(8,7,13,.55);margin-top:8px}
+.scroll-box.tall{max-height:400px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;z-index:5;background:#161224;text-align:left;color:var(--di);font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--li);padding:7px 8px;white-space:nowrap}
 th.n{text-align:right}
-td{padding:5px;border-bottom:1px solid #1e1a2c;vertical-align:top;overflow-wrap:anywhere}
+td{padding:6px 8px;border-bottom:1px solid #1b1729;vertical-align:middle;overflow-wrap:anywhere}
 tr:last-child td{border-bottom:none}
-.big{font:600 26px/1.1 var(--mo);letter-spacing:-.5px}
-.mo{font-family:var(--mo)}.num{font-family:var(--mo);text-align:right;white-space:nowrap}
+tbody tr:hover{background:rgba(255,45,149,.06)}
+.big{font:600 23px/1.15 var(--mo);letter-spacing:-.5px}
+.mo{font-family:var(--mo)}
+.num{font-family:var(--mo);text-align:right;white-space:nowrap}
 .ok{color:var(--ok)}.bad{color:var(--bad)}.wa{color:var(--wa)}.di{color:var(--di)}
-.pill{display:inline-block;padding:1px 7px;border-radius:10px;font:10.5px var(--mo);
-border:1px solid var(--li);background:#1d1830;white-space:nowrap}
-.pill.ok{color:var(--ok);border-color:#1b5c40}.pill.bad{color:var(--bad);border-color:#5c2030}
-.pill.wa{color:var(--wa);border-color:#5c4520}.pill.di{color:var(--di)}
-.kv{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #1e1a2c;
-align-items:baseline;flex-wrap:wrap}.kv:last-child{border-bottom:none}
-/* El valor de una fila clave/valor puede ser largo ("6975 cand · 0 entradas · 575 rechazos"). Con
-   white-space:nowrap heredado de .num medía 380 px y arrastraba toda la web a 320 px de ancho.
-   Aquí puede partir por los espacios; en las tablas sigue sin partirse. */
-.kv .num{white-space:normal;overflow-wrap:break-word;text-align:right}
-.bar{height:9px;background:#1d1830;border-radius:5px;overflow:hidden;min-width:60px}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),#ff7ac1);
-border-radius:5px;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.pill{display:inline-block;padding:2px 7px;border-radius:8px;font:600 10px var(--mo);
+  border:1px solid var(--li);background:#1b162b;white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:#1c5c40;background:var(--ok-bg)}
+.pill.bad{color:var(--bad);border-color:#5c2030;background:var(--bad-bg)}
+.pill.wa{color:var(--wa);border-color:#5c4520;background:var(--wa-bg)}
+.pill.di{color:var(--di)}
+.bar{height:8px;background:#1d1830;border-radius:5px;overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),#ff7ac1);border-radius:5px;
+  transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.bar.ok-bar i{background:linear-gradient(90deg,#16a36a,var(--ok))}
 .kill i{background:linear-gradient(90deg,#ff4d6d,#ff8fa3)}
-#warn{display:none;background:#3a1020;border:1px solid var(--bad);color:#ffd9e2;padding:9px 11px;
-border-radius:9px;margin:10px 0;font-size:12.5px}
-#gate{position:fixed;inset:0;background:rgba(8,7,13,.97);display:flex;align-items:center;
-justify-content:center;padding:20px;z-index:50}
-#gate .box{background:var(--pa);border:1px solid var(--li);border-radius:12px;padding:20px;
-max-width:430px;width:100%}
-#gate h3{margin:0 0 6px;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
-#gate input{width:100%;margin-top:12px;padding:11px;border-radius:8px;border:1px solid var(--li);
-background:#0d0b16;color:var(--tx);font:13px var(--mo)}
-#gate button{margin-top:12px;width:100%;padding:11px;border-radius:8px;border:0;cursor:pointer;
-background:var(--ac);color:#fff;font-weight:600;letter-spacing:.06em}
-#gate .err{color:var(--bad);font-size:12px;min-height:16px;margin-top:8px}
-.rownew{animation:flash 2.6s ease-out}
-@keyframes flash{0%{background:rgba(255,45,149,.22)}100%{background:transparent}}
-.spark{display:flex;align-items:flex-end;gap:2px;height:46px;margin-top:8px}
-.spark b{flex:1;background:linear-gradient(180deg,var(--ac),#7a1560);border-radius:2px 2px 0 0;
-min-height:2px;transition:height .8s cubic-bezier(.2,.8,.2,1)}
-footer{margin-top:28px;color:var(--di);font-size:11px;border-top:1px solid var(--li);padding-top:9px}
-code{font:11.5px var(--mo);background:var(--pa2);padding:1px 5px;border-radius:4px}
-.fresh{font-size:10.5px;color:var(--di)}
-/* Filtro de posiciones. Los botones llevan el recuento dentro para que se vea qué hay debajo
-   antes de pulsarlos, y el activo se marca con color, no con un icono que haya que recordar. */
-.fb{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
-.fb button{padding:3px 9px;border-radius:11px;border:1px solid var(--li);background:#1d1830;
-color:var(--di);font:10.5px var(--mo);cursor:pointer;white-space:nowrap}
-.fb button:hover{border-color:var(--ac)}
-.fb button.on{background:var(--ac);border-color:var(--ac);color:#fff}
-.fb button.win.on{background:var(--ok);border-color:var(--ok);color:#06120c}
+.book-card{display:flex;flex-direction:column;border-top:3px solid var(--ac);min-width:0}
+.book-card.control-card{border-top-color:#6366f1}
+.book-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  padding-bottom:9px;border-bottom:1px solid var(--li)}
+.book-title{font-weight:700;font-size:14px;color:#fff}
+.book-sub{font-size:11px;color:var(--di);margin-top:2px}
+.book-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:9px;
+  background:rgba(10,8,16,.45);border:1px solid #221c35;border-radius:8px;padding:8px 9px}
+.bm-item .bm-lbl{font-size:10px;color:var(--di);text-transform:uppercase;letter-spacing:.05em}
+.bm-item .bm-val{font:600 15px/1.2 var(--mo);margin-top:2px;overflow-wrap:anywhere}
+.wedge{margin-top:8px;border:1px solid #5c4520;background:var(--wa-bg);border-radius:8px;padding:7px 9px;
+  font-size:11.5px;color:#ffd9a3}
+.winbar{display:flex;height:6px;border-radius:4px;overflow:hidden;background:#1d1830;margin-top:9px;gap:1px}
+.winbar span{height:100%}
+.fb-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:9px 0 4px}
+.fb{display:flex;gap:5px;flex-wrap:wrap}
+.fb button{padding:4px 10px;border-radius:8px;border:1px solid var(--li);background:#181426;
+  color:var(--di);font:600 10.5px var(--mo);cursor:pointer;white-space:nowrap}
+.fb button:hover{border-color:var(--ac);color:var(--tx)}
+.fb button.on{background:var(--ac);border-color:var(--ac);color:#fff;box-shadow:0 0 12px var(--ac-glow)}
+.fb button.win.on{background:var(--ok);border-color:var(--ok);color:#05160e}
 .fb button.loss.on{background:var(--bad);border-color:var(--bad);color:#fff}
-.fb .cnt{opacity:.75}
-/* Tablas anchas: se desplazan ELLAS, no la pagina. Medido en un viewport de 390 px: la tabla de
-   posiciones ocupaba 483 px y arrastraba toda la web de lado (document.scrollWidth 509), asi que
-   habia que mover la pantalla entera para leer la ultima columna. El contenedor .tw scrollea en
-   horizontal; la sombra interior de la derecha es la pista de que hay mas contenido ahi. */
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;
-box-shadow:inset -14px 0 12px -12px rgba(255,45,149,.55)}
-.tw table{margin-top:11px}
+.fb .cnt{opacity:.8;margin-left:3px;font-weight:400}
+.search-in{background:#0d0b15;border:1px solid var(--li);color:var(--tx);border-radius:7px;
+  padding:4px 8px;font:11px var(--mo);width:130px;max-width:100%}
+.search-in:focus{outline:none;border-color:var(--ac)}
+.fade-in{animation:fadeIn .22s ease-out}
+@keyframes fadeIn{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.rownew{animation:flash 2.6s ease-out}
+@keyframes flash{0%{background:rgba(255,45,149,.26)}100%{background:transparent}}
+.spark{display:flex;align-items:flex-end;gap:3px;height:52px;margin-top:8px;padding-top:4px}
+.spark b{flex:1;background:linear-gradient(180deg,var(--ac),#591246);border-radius:3px 3px 0 0;
+  min-height:3px;transition:height .6s cubic-bezier(.2,.8,.2,1)}
+#warn{display:none;background:#3a1020;border:1px solid var(--bad);color:#ffd9e2;padding:10px 14px;
+  border-radius:10px;margin:10px 0;font-size:12.5px}
+#gate{position:fixed;inset:0;background:rgba(7,6,11,.96);backdrop-filter:blur(8px);display:flex;
+  align-items:center;justify-content:center;padding:20px;z-index:100}
+#gate .box{background:var(--pa);border:1px solid var(--li-hi);border-radius:14px;padding:20px;
+  max-width:420px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+#gate h3{margin:0 0 6px;font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+#gate input[type=password]{width:100%;margin-top:12px;padding:11px;border-radius:8px;
+  border:1px solid var(--li);background:#090710;color:var(--tx);font:13px var(--mo)}
+#gate button{margin-top:12px;width:100%;padding:11px;border-radius:8px;border:0;cursor:pointer;
+  background:var(--ac);color:#fff;font-weight:600;letter-spacing:.06em}
+#gate .err{color:var(--bad);font-size:12px;min-height:16px;margin-top:8px}
+.rem-row{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--di)}
+footer{margin-top:26px;color:var(--di);font-size:11px;border-top:1px solid var(--li);padding-top:10px;
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px}
 .nw{white-space:nowrap}
-</style></head><body>
-<div id="gate"><div class="box">
-  <h3>FOMO · estado</h3>
-  <div class="s">El contenido está cifrado. La contraseña se queda en este navegador y no se
-  envía a ningún sitio: sirve para descifrar en local lo que el VPS cifró.</div>
-  <input id="pw" type="password" placeholder="contraseña" autocomplete="current-password">
-  <button id="go">descifrar</button>
-  <div class="err" id="err"></div>
-</div></div>
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h3>FOMO · Terminal Cifrado</h3>
+    <div class="s">El estado se cifra en el VPS (AES-256-GCM + PBKDF2 600k iteraciones). La contraseña
+    no sale de tu navegador: sirve para descifrar aquí lo que el VPS cifró.</div>
+    <input id="pw" type="password" placeholder="Contraseña de descifrado" autocomplete="current-password">
+    <label class="rem-row">
+      <input type="checkbox" id="rem-local"> Recordar en este navegador (localStorage)
+    </label>
+    <button id="go">Descifrar y abrir terminal</button>
+    <div class="err" id="err"></div>
+  </div>
+</div>
 
 <div class="w">
-<header>
-  <div><h1>FOMO <i>/ en vivo</i></h1>
-  <div class="s" id="sub">conectando…</div></div>
-  <div class="s" style="text-align:right">
-    <span class="dot" id="dot"></span><span id="age">—</span><br>
-    <span class="fresh" id="meta"></span></div>
-</header>
-<div id="warn"></div><div id="root"></div>
-<footer>Descifrado y dibujado en tu navegador. El VPS solo deja un fichero cifrado en un repo
-público: no hay ningún proceso escuchando, ningún puerto abierto y nada legible publicado.
-Actualizado <span id="cad"></span>. Si el aviso de integridad está en rojo, todo lo de abajo es
-sospechoso.</footer>
+  <header>
+    <div class="brand">
+      <h1>FOMO <i>/ TERMINAL</i></h1>
+      <span class="badge-mode" id="mode-badge">PAPER · BSC</span>
+      <div class="s" id="sub" style="width:100%">Conectando con el registro…</div>
+    </div>
+    <div class="hdr-right">
+      <div class="status-pill">
+        <span class="dot" id="dot"></span>
+        <div>
+          <div id="age" class="mo" style="font-size:11px">—</div>
+          <div class="s" id="meta" style="font-size:10px"></div>
+        </div>
+      </div>
+      <button class="btn-icon" id="btn-refresh" title="Comprobar cambios ahora">↻ Refrescar</button>
+      <button class="btn-icon" id="btn-lock" title="Bloquear sesión">🔒</button>
+    </div>
+    <div class="refresh-track"><div class="refresh-bar" id="rbar"></div></div>
+  </header>
+
+  <div id="warn"></div>
+  <div id="root"></div>
+
+  <footer>
+    <div>Descifrado y dibujado en tu navegador. Ledger append-only encadenado por SHA-256; el VPS no
+    mantiene ningún proceso escuchando.</div>
+    <div id="cad" class="mo"></div>
+  </footer>
 </div>
 
 <script>
 const BLOB = "https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc";
 const ITER_FALLBACK = 600000;
+const POLL_MS = 60000;
+
 let STATE = null, LAST_SEEN = {}, FIRST = true;
-/* Filtro de la tabla de posiciones. Vive fuera de render() a proposito: render() reescribe el
-   DOM entero cada minuto, asi que un filtro guardado en el DOM se perderia en cada refresco y
-   volverias a ver la lista completa sin darte cuenta. */
-let PFILTER = 'all';
+let LAST_TS = null, LAST_CHECK = null, NEXT_POLL_AT = Date.now() + POLL_MS;
+
+/* Un filtro POR LIBRO. Antes era una sola variable global y el bucle de los dos libros la leia a la
+   vez: pulsar "cerradas ganadoras" en Estrategia cambiaba tambien Control, y la comparacion A/B
+   dejaba de ser una comparacion entre dos vistas distintas. */
+const PFILTER = { screened: 'all', control: 'all' };
+const PSEARCH = { screened: '', control: '' };
+let CAND_FILTER = 'all';
+
 const PF_BUCKET = p => p.state === 'abierta' ? 'open' : ((p.pnl || 0) > 0 ? 'win' : 'loss');
-function setPosFilter(k){ PFILTER = k; render(); }
 
 const $ = s => document.querySelector(s);
-const esc = s => (s===null||s===undefined)?'':String(s)
-  .replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const n2 = (v,d=0)=> (v===null||v===undefined) ? '—'
-  : Number(v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
-function b64buf(b64){const s=atob(b64);const a=new Uint8Array(s.length);
-  for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;}
-function ago(iso){ if(!iso) return '—';
-  const d=(Date.now()-new Date(iso).getTime())/1000;
-  if(d<90) return Math.max(0,Math.round(d))+' s';
-  if(d<5400) return Math.round(d/60)+' min';
-  return Math.round(d/3600)+' h'; }
+/* esc() escapa TAMBIEN la comilla simple: hay atributos construidos con comillas simples y sin
+   &#39; un valor que las contenga se sale del atributo. */
+const esc = s => (s === null || s === undefined) ? '' : String(s)
+  .replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n2 = (v, d = 0) => (v === null || v === undefined || Number.isNaN(Number(v))) ? '—'
+  : Number(v).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
 
+function b64buf(b64){
+  const s = atob(b64), a = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+  return a;
+}
+function ago(iso){
+  if (!iso) return '—';
+  const d = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (d < 90) return Math.max(0, Math.round(d)) + ' s';
+  if (d < 5400) return Math.round(d / 60) + ' min';
+  return (d / 3600).toFixed(1) + ' h';
+}
 async function deriveAndDecrypt(pass, env){
   const enc = new TextEncoder();
   const base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey(
-    {name:'PBKDF2', salt:b64buf(env.salt), iterations: env.iter||ITER_FALLBACK, hash:'SHA-256'},
-    base, {name:'AES-GCM', length:256}, false, ['decrypt']);
-  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:b64buf(env.iv)}, key, b64buf(env.ct));
+    { name:'PBKDF2', salt:b64buf(env.salt), iterations:env.iter||ITER_FALLBACK, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['decrypt']);
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64buf(env.iv) }, key, b64buf(env.ct));
   return JSON.parse(new TextDecoder().decode(pt));
 }
-let ETAG = null, LASTFETCH = null, NOTMOD = false;
-async function fetchBlob(){
+
+let ETAG = null;
+async function fetchBlob(force = false){
   const headers = {};
-  if(ETAG) headers['If-None-Match'] = ETAG;      // revalidate instead of re-downloading 107 KB
-  const r = await fetch(BLOB, {cache:'no-cache', headers});
-  LASTFETCH = new Date();
-  LAST_CHECK = LASTFETCH;
-  if(r.status === 304){ NOTMOD = true; return null; }   // unchanged: nothing to decrypt
-  if(!r.ok) throw new Error('http '+r.status);
+  if (ETAG && !force) headers['If-None-Match'] = ETAG;
+  const r = await fetch(BLOB + (force ? '?t=' + Date.now() : ''), { cache:'no-cache', headers });
+  LAST_CHECK = new Date();
+  if (r.status === 304) return null;
+  if (!r.ok) throw new Error('HTTP ' + r.status);
   ETAG = r.headers.get('etag');
-  NOTMOD = false;
   return await r.json();
 }
 
-/* animated number: counts from previous value to the new one */
 const VALS = {};
-function anim(el, to, dec=0){
+function anim(el, to, dec = 0, suffix = ''){
+  if (!el || to === null || to === undefined) return;
   const key = el.dataset.k || (el.dataset.k = Math.random().toString(36).slice(2));
-  const from = (VALS[key]===undefined) ? 0 : VALS[key];
+  const from = (VALS[key] === undefined) ? to : VALS[key];
   VALS[key] = to;
-  if(FIRST){ el.textContent = n2(to,dec); return; }
-  const t0 = performance.now(), dur = 700;
+  if (FIRST || from === to){ el.textContent = n2(to, dec) + suffix; return; }
+  const t0 = performance.now(), dur = 650;
   (function step(t){
-    const p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3);
-    el.textContent = n2(from+(to-from)*e, dec);
-    if(p<1) requestAnimationFrame(step); else el.textContent = n2(to,dec);
+    const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = n2(from + (to - from) * e, dec) + suffix;
+    if (p < 1) requestAnimationFrame(step); else el.textContent = n2(to, dec) + suffix;
   })(t0);
 }
 
+/* ── filtros y buscador: cada libro por su lado, y solo se repinta SU caja ─────────────────── */
+window.setBookFilter = function(book, filterKey){
+  PFILTER[book] = filterKey;
+  renderBookPositions(book, true);
+};
+window.setBookSearch = function(book, query){
+  PSEARCH[book] = (query || '').trim().toLowerCase();
+  renderBookPositions(book, false);
+};
+window.setCandFilter = function(filterKey){
+  CAND_FILTER = filterKey;
+  renderCandidatesBox();
+};
+
+function renderBookPositions(book, animateBox = false){
+  if (!STATE || !STATE.book || !STATE.book[book]) return;
+  const b = STATE.book[book];
+  const P = b.positions || [];
+  const fKey = PFILTER[book] || 'all';
+  const q = PSEARCH[book] || '';
+
+  const cnt = { all:P.length, open:0, win:0, loss:0 };
+  for (const p of P) cnt[PF_BUCKET(p)]++;
+
+  const fb = $('#fb-' + book);
+  if (fb){
+    fb.innerHTML =
+      `<button class="${fKey==='all'?'on':''}" onclick="setBookFilter('${book}','all')">Todas <span class="cnt">${cnt.all}</span></button>`
+    + `<button class="${fKey==='open'?'on':''}" onclick="setBookFilter('${book}','open')">Abiertas <span class="cnt">${cnt.open}</span></button>`
+    + `<button class="win ${fKey==='win'?'on':''}" onclick="setBookFilter('${book}','win')">Ganadoras <span class="cnt">${cnt.win}</span></button>`
+    + `<button class="loss ${fKey==='loss'?'on':''}" onclick="setBookFilter('${book}','loss')">Perdedoras <span class="cnt">${cnt.loss}</span></button>`;
+  }
+
+  let rows = fKey === 'all' ? P : P.filter(p => PF_BUCKET(p) === fKey);
+  if (q){
+    rows = rows.filter(p =>
+      String(p.position || '').toLowerCase().includes(q) ||
+      String(p.why || '').toLowerCase().includes(q) ||
+      String(p.venue || '').toLowerCase().includes(q));
+  }
+
+  const box = $('#pos-box-' + book);
+  if (!box) return;
+  let h = '';
+  if (!P.length){
+    h = '<div class="s" style="padding:14px">Sin posiciones en esta época.</div>';
+  } else if (!rows.length){
+    h = '<div class="s" style="padding:14px">Ninguna posición coincide con este filtro en este libro.</div>';
+  } else {
+    let sc = 0, sv = 0, spl = 0, sinprecio = 0;
+    for (const p of rows){
+      sc += p.cost || 0;
+      if (p.value === null) sinprecio++; else sv += p.value;
+      if (p.pnl !== null) spl += p.pnl;
+    }
+    h += `<div class="s" style="margin:3px 0 6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">`
+      +  `<span>Mostrando <b>${rows.length}</b> de ${P.length} · coste <b>${n2(sc,2)} €</b> · valor de salida <b>${n2(sv,2)} €</b></span>`
+      +  `<span>Subtotal P&amp;L <b class="${spl>0?'ok':spl<0?'bad':'di'}">${spl>0?'+':''}${n2(spl,2)} €</b>`
+      +  (sinprecio ? ` · <span class="wa">${sinprecio} sin precio de salida</span>` : '')
+      +  `</span></div>`;
+    h += `<div class="scroll-box ${animateBox?'fade-in':''}"><table><thead><tr>`
+      +  `<th>Estado</th><th>Token</th><th>Abierta</th><th class="n">Coste €</th>`
+      +  `<th class="n">Valor €</th><th class="n">P&amp;L €</th><th class="n">%</th><th>Salida</th>`
+      +  `</tr></thead><tbody>`;
+    for (const p of rows){
+      const isOpen = p.state === 'abierta';
+      const pl = p.pnl;
+      const stPill = isOpen ? '<span class="pill wa">abierta</span>'
+        : ((pl || 0) > 0 ? '<span class="pill ok">ganada</span>' : '<span class="pill bad">cerrada</span>');
+      const tok = String(p.position || '').split(':').slice(2, 4).join(':') || p.position || '';
+      const short = tok.length > 17 ? tok.slice(0, 9) + '…' + tok.slice(-6) : tok;
+      h += `<tr title="${esc((p.venue||'') + (p.val_src ? ' · ' + p.val_src : ''))}">`
+        +  `<td>${stPill}</td>`
+        +  `<td class="mo nw" style="font-size:11px">${esc(short)}</td>`
+        +  `<td class="mo nw di" style="font-size:11px">${esc((p.opened||'').slice(5,16).replace('T',' '))}</td>`
+        +  `<td class="num">${n2(p.cost,2)}</td>`
+        +  `<td class="num">${p.value===null?'<span class="wa" title="Sin precio de salida medible">s/p</span>':n2(p.value,2)}</td>`
+        +  `<td class="num ${pl>0?'ok':pl<0?'bad':'di'}">${pl===null?'—':(pl>0?'+':'')+n2(pl,2)}</td>`
+        +  `<td class="num ${(p.ret||0)>0?'ok':(p.ret||0)<0?'bad':'di'}">${p.ret===null?'—':(p.ret>0?'+':'')+n2(p.ret*100,1)+'%'}</td>`
+        +  `<td class="di" style="font-size:11px">${esc(p.why||'—')}</td></tr>`;
+    }
+    h += `</tbody></table></div>`;
+  }
+  box.innerHTML = h;
+}
+
+function renderCandidatesBox(){
+  if (!STATE) return;
+  const box = $('#cand-table-box');
+  if (!box) return;
+  const all = STATE.candidates || [];
+  const filtered = CAND_FILTER === 'all' ? all : all.filter(c => {
+    if (CAND_FILTER === 'enter') return c.decision === 'enter';
+    if (CAND_FILTER === 'pass_some') return (c.n_pass || 0) > 0;
+    if (CAND_FILTER === 'skip') return c.decision === 'skip';
+    return true;
+  });
+  const fbt = $('#cand-fb');
+  if (fbt){
+    fbt.innerHTML =
+      `<button class="${CAND_FILTER==='all'?'on':''}" onclick="setCandFilter('all')">Todos <span class="cnt">${all.length}</span></button>`
+    + `<button class="win ${CAND_FILTER==='enter'?'on':''}" onclick="setCandFilter('enter')">Entradas <span class="cnt">${all.filter(x=>x.decision==='enter').length}</span></button>`
+    + `<button class="${CAND_FILTER==='pass_some'?'on':''}" onclick="setCandFilter('pass_some')">Con checks pass <span class="cnt">${all.filter(x=>(x.n_pass||0)>0).length}</span></button>`;
+  }
+  let h = `<div class="scroll-box tall"><table><thead><tr><th>Env</th><th>Token</th>`
+    + `<th class="n">Liq USD</th><th class="n">Edad h</th><th class="n">Pass</th><th class="n">Fail</th>`
+    + `<th class="n">?</th><th>Decisión</th></tr></thead><tbody>`;
+  for (const c of filtered){
+    const isNew = !LAST_SEEN['c:' + c.id];
+    const d = c.decision==='enter' ? '<span class="pill ok">enter</span>'
+            : c.decision==='skip' ? '<span class="pill bad">skip</span>' : '<span class="pill di">—</span>';
+    h += `<tr class="${isNew && !FIRST ? 'rownew':''}" title="${esc(c.reason || c.id)}">`
+      +  `<td class="mo">${esc(c.env)}</td>`
+      +  `<td class="mo"><b>${esc(c.symbol || c.id.slice(0,12))}</b></td>`
+      +  `<td class="num">${n2(c.liq,0)}</td><td class="num">${n2(c.age_h,2)}</td>`
+      +  `<td class="num ok">${n2(c.n_pass)}</td><td class="num bad">${n2(c.n_fail)}</td>`
+      +  `<td class="num wa">${n2(c.n_unk)}</td><td>${d}</td></tr>`;
+  }
+  h += `</tbody></table></div>`;
+  box.innerHTML = h;
+}
+
+function bookCard(book, S){
+  const b = (S.book || {})[book];
+  if (!b) return '';
+  const isScr = book === 'screened';
+  const P = b.positions || [];
+  let nWin = 0, nLoss = 0, nOpen = 0;
+  for (const p of P){ const k = PF_BUCKET(p); if (k==='win') nWin++; else if (k==='loss') nLoss++; else nOpen++; }
+  const tot = Math.max(1, P.length);
+  const marked = P.filter(p => p.state === 'abierta' && p.value !== null).length;
+  const openAll = P.filter(p => p.state === 'abierta').length;
+  let h = `<div class="p book-card ${isScr?'':'control-card'}">`
+    + `<div class="book-hdr"><div>`
+    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · 6 patas' : '🧪 CONTROL · cortes gratis'}</div>`
+    + `<div class="book-sub">${isScr
+        ? 'exige mint, freeze, concentración, honeypot, nonce ≤ 5 y LP bloqueado'
+        : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
+    + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
+    + `<div class="book-metrics">`
+    + `<div class="bm-item"><div class="bm-lbl">Capital sim</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">Disponible</div><div class="bm-val" data-k="av-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">Desplegado</div><div class="bm-val" data-k="de-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">Realizado</div><div class="bm-val ${b.realized>0?'ok':b.realized<0?'bad':'di'}">${b.realized>0?'+':''}${n2(b.realized,2)}</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">Mark abiertas</div><div class="bm-val ${b.unrealized>0?'ok':b.unrealized<0?'bad':'di'}">${b.unrealized>0?'+':''}${n2(b.unrealized,2)}</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">Fees</div><div class="bm-val" data-k="fe-${book}">0</div></div>`
+    + `</div>`
+    + `<div class="winbar" title="Ganadoras ${nWin} · Perdedoras ${nLoss} · Abiertas ${nOpen}">`
+    + `<span style="width:${(100*nWin/tot).toFixed(1)}%;background:var(--ok)"></span>`
+    + `<span style="width:${(100*nLoss/tot).toFixed(1)}%;background:var(--bad)"></span>`
+    + `<span style="width:${(100*nOpen/tot).toFixed(1)}%;background:var(--wa)"></span></div>`;
+  /* La cuña honesta: "mark" es lo que devolveria vender, y las abiertas SIN precio de salida no
+     valen su coste — no valen nada medible. Se imprimen las dos cifras y su cobertura. */
+  if (b.unvalued_open){
+    h += `<div class="wedge"><b>${b.unvalued_open} abiertas sin precio de salida</b> ·
+      coste ${n2(b.unvalued_cost,2)} € · su valor no es 0, es <b>desconocido</b> (el contrato no
+      responde getReserves y no se inventa). Este libro, realizado y también en el peor caso:
+      <b>${n2(b.realized,2)} €</b> → <b>${n2(b.realized_if_unvalued_are_zero,2)} €</b>.</div>`;
+  }
+  h += `<div class="wedge" style="border-color:#3d3360;background:rgba(99,102,241,.10);color:#cfd2ff">
+     El "mark" de las abiertas sale de la fórmula de venta del propio pool (producto constante, con
+     el impacto de nuestra orden), no del precio spot: cobertura <b>${marked} de ${openAll}</b>
+     abiertas valoradas. <b>Es una marca, no dinero</b>: el criterio de capital real se juzga sobre
+     el realizado.</div>`;
+  h += `<div class="fb-row"><div class="fb" id="fb-${book}"></div>
+    <input class="search-in" type="search" placeholder="Filtrar token/motivo…"
+      value="${esc(PSEARCH[book])}" oninput="setBookSearch('${book}', this.value)"></div>
+    <div id="pos-box-${book}"></div>`;
+  return h + `</div>`;
+}
+
 function render(){
-  const S = STATE; if(!S) return;
-  $('#sub').textContent = 'entornos: ' + (S.envs.join(', ')||'—') +
-    ' · papel hasta que la puerta se cumpla';
-  $('#age').textContent = 'datos: hace ' + ago(S.generated_at);
+  const S = STATE;
+  if (!S) return;
+  $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
+    + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · dinero real congelado hasta +1-2%/mes en papel`;
+  $('#age').textContent = 'Datos: hace ' + ago(S.generated_at);
   LAST_TS = S.generated_at;
   $('#meta').textContent = S.ledger;
   const w = $('#warn');
-  if(!S.integrity.ok){ w.style.display='block';
-    w.innerHTML = '<b>INTEGRIDAD ROTA</b><br>' + esc(S.integrity.problems.join(' · ')); }
-  else w.style.display='none';
+  if (!S.integrity.ok){
+    w.style.display = 'block';
+    w.innerHTML = '<b>⚠️ INTEGRIDAD DEL LEDGER ROTA</b><br>' + esc((S.integrity.problems||[]).join(' · '));
+  } else w.style.display = 'none';
 
-  let h = '';
-  /* 1 · integrity */
-  h += '<h2>1 · Integridad del registro</h2><div class="p"><div class="g">'
-    +  '<div><div class="big '+(S.integrity.ok?'ok':'bad')+'">'+(S.integrity.ok?'OK':'ROTA')+'</div>'
-    +  '<div class="s">' + S.integrity.tables.length + ' tablas encadenadas</div></div>'
-    +  '<div><table><tr><th>tabla</th><th class="n">filas</th><th>guarda</th></tr>';
-  for(const t of S.integrity.tables)
-    h += '<tr><td class="mo">'+esc(t.name)+'</td><td class="num">'+n2(t.rows)+'</td><td>'
-      +  (t.guarded?'<span class="ok">ok</span>':'<span class="bad">falta</span>')+'</td></tr>';
-  h += '</table></div></div></div>';
-
-  /* 2 · money + gate */
-  const g = S.gate, pct = Math.min(100, Math.round(100*g.screened/g.target));
-  h += '<h2>2 · Dinero y puerta</h2><div class="g">'
-    +  '<div class="p"><div class="s">capital real</div><div class="big" data-k="cash">0</div>'
-    +  '<div class="s">tamaño por posición '+esc(S.money.per_position)+' €</div></div>'
-    +  '<div class="p"><div class="s">cribados en papel</div>'
-    +  '<div class="big"><span data-k="scr">0</span><span class="di" style="font-size:14px">/'+g.target+'</span></div>'
-    +  '<div class="bar"><i id="gb" style="width:0%"></i></div>'
-    +  '<div class="kv"><span class="s">recolectados</span><span class="num" data-k="col">0</span></div>'
-    +  '<div class="kv"><span class="s">intentos reales</span><span class="num">'+n2(g.real_attempts)+'/5</span></div>'
-    +  '<div class="s" style="margin-top:4px">dinero real congelado hasta que la puerta se cumpla</div></div>'
-    +  '<div class="p"><div class="s">por entorno</div>';
-  for(const e of S.envs){ const c = S.cash[e]||{};
-    h += '<div class="kv"><span class="mo">'+esc(e)+'</span><span class="num">'+n2(c.candidates)
-      +  ' cand · '+n2(c.entries)+' entradas · '+n2(c.rejects)+' rechazos</span></div>'; }
-  h += '</div></div>';
-
-  /* 2b · el libro de papel: capital y P&L. Esto es lo que faltaba. */
+  const g = S.gate || { screened:0, target:100, collected:0, real_attempts:0 };
+  const pctGate = Math.min(100, Math.round(100 * g.screened / (g.target || 100)));
   const BK = S.book || {};
-  h += '<h2>2b · Libro de papel: capital y P&amp;L</h2>';
-  for(const book of ['screened','control']){
-    const b = BK[book]; if(!b) continue;
-    const lab = book==='screened' ? 'estrategia · solo lo que pasa TODOS los checks'
-                                  : 'control · todo lo que sobrevive los cortes gratis';
-    const pl = b.realized + b.unrealized;
-    h += '<div class="p" style="margin-bottom:9px">'
-      +  '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">'
-      +  '<b>'+esc(lab)+'</b><span class="s">'+b.open+' abiertas · '+b.closed+' cerradas</span></div>'
-      +  '<div class="g" style="margin-top:9px">'
-      +  '<div><div class="s">capital de simulación</div><div class="big" data-k="cap-'+book+'">0</div></div>'
-      +  '<div><div class="s">disponible</div><div class="big" data-k="av-'+book+'">0</div></div>'
-      +  '<div><div class="s">desplegado</div><div class="big" data-k="de-'+book+'">0</div></div>'
-      +  '<div><div class="s">P&amp;L total</div><div class="big '+(pl>0?'ok':pl<0?'bad':'di')+'">'
-      +  (pl>0?'+':'')+n2(pl,2)+'</div>'
-      +  '<div class="s">realizado '+n2(b.realized,2)+' · no realizado '+n2(b.unrealized,2)+'</div></div>'
-      +  '<div><div class="s">comisiones pagadas</div><div class="big" data-k="fe-'+book+'">0</div></div>'
-      +  '</div>';
-    const P = b.positions || [];
-    const cnt = {all:P.length, open:0, win:0, loss:0};
-    for(const p of P) cnt[PF_BUCKET(p)]++;
-    const rows = PFILTER==='all' ? P : P.filter(p => PF_BUCKET(p)===PFILTER);
-    h += '<div class="fb">'
-      +  '<button class="'+(PFILTER==='all'?'on':'')+'" onclick="setPosFilter(\'all\')">'
-      +  'todas <span class="cnt">'+cnt.all+'</span></button>'
-      +  '<button class="'+(PFILTER==='open'?'on':'')+'" onclick="setPosFilter(\'open\')">'
-      +  'abiertas <span class="cnt">'+cnt.open+'</span></button>'
-      +  '<button class="win '+(PFILTER==='win'?'on':'')+'" onclick="setPosFilter(\'win\')">'
-      +  'cerradas ganadoras <span class="cnt">'+cnt.win+'</span></button>'
-      +  '<button class="loss '+(PFILTER==='loss'?'on':'')+'" onclick="setPosFilter(\'loss\')">'
-      +  'cerradas perdedoras <span class="cnt">'+cnt.loss+'</span></button></div>';
-    if(!P.length){
-      h += '<div class="s" style="margin-top:9px">Sin posiciones todavía. El capital está '
-        +  'entero y sin tocar: no se ha comprado nada.</div>';
-    } else if(!rows.length){
-      h += '<div class="s" style="margin-top:6px">Ninguna posición en este filtro.</div>';
-    } else {
-      /* Subtotal de lo que se está mirando: elegir "cerradas perdedoras" y ver el daño sumado
-         es la razón de tener el filtro, y obligar a sumarlo a ojo lo desaprovecharía. */
-      let sc=0, sv=0, spl=0, sinprecio=0;
-      for(const p of rows){
-        sc += p.cost||0;
-        if(p.value===null) sinprecio++; else sv += p.value;
-        if(p.pnl!==null) spl += p.pnl;
-      }
-      h += '<div class="s" style="margin:0 0 6px">'+rows.length+' de '+P.length
-        +  ' · coste '+n2(sc,2)+' € · valor '+n2(sv,2)+' € · P&amp;L <b class="'
-        +  (spl>0?'ok':spl<0?'bad':'di')+'">'+(spl>0?'+':'')+n2(spl,2)+' €</b>'
-        +  (sinprecio?(' · <span class="wa">'+sinprecio+' sin precio de salida: no entran en el '
-        +  'valor ni en el P&amp;L</span>'):'')+'</div>';
-      h += '<div class="tw"><table><tr><th>estado</th><th>abierta</th>'
-        +  '<th class="n">coste €</th><th class="n">valor €</th><th class="n">P&amp;L €</th>'
-        +  '<th class="n">%</th><th>motivo de salida</th></tr>';
-      for(const p of rows){
-        const cl = p.state==='abierta' ? 'wa' : 'di';
-        const pl = p.pnl===null ? null : p.pnl;
-        h += '<tr title="'+esc(p.venue||'')+'"><td class="'+cl+'">'+esc(p.state)+'</td>'
-          +  '<td class="mo nw">'+esc((p.opened||'').slice(5,16))+'</td>'
-          +  '<td class="num">'+n2(p.cost,2)+'</td>'
-          +  '<td class="num">'+(p.value===null?'—':n2(p.value,2))+'</td>'
-          +  '<td class="num '+((pl||0)>0?'ok':(pl||0)<0?'bad':'')+'">'
-          +  (pl===null?'—':(pl>0?'+':'')+n2(pl,2))+'</td>'
-          +  '<td class="num">'+(p.ret===null?'—':(p.ret>0?'+':'')+n2(p.ret*100,1)+'%')+'</td>'
-          +  '<td class="di" style="font-size:11px">'+esc(p.why||'—')+'</td></tr>';
-      }
-      h += '</table></div>';
+  const scr = BK.screened || { realized:0 }, ctl = BK.control || { realized:0 };
+  const totalRealized = (scr.realized || 0) + (ctl.realized || 0);
+  const totalUnval = ((BK.screened && BK.screened.unvalued_cost) || 0)
+                   + ((BK.control && BK.control.unvalued_cost) || 0);
+  const rows = (S.integrity.tables || []).reduce((a,t) => a + (t.rows || 0), 0);
+
+  let h = '<div class="g-kpi">';
+  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
+     <span class="s">INTEGRIDAD SHA-256</span>
+     <span class="pill ${S.integrity.ok?'ok':'bad'}">${S.integrity.ok?'VERIFICADO':'CORRUPTO'}</span></div>
+     <div class="big ${S.integrity.ok?'ok':'bad'}" style="margin-top:6px">${(S.integrity.tables||[]).length}/${(S.integrity.tables||[]).length} OK</div>
+     <div class="s" style="margin-top:4px">${rows.toLocaleString('es-ES')} filas encadenadas (append-only)</div></div>`;
+  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
+     <span class="s">EMBUDO DE CRIBADO</span><span class="mo s">${pctGate}%</span></div>
+     <div class="big" style="margin-top:6px"><span data-k="scr">0</span><span class="di" style="font-size:14px">/${g.target}</span></div>
+     <div class="bar ok-bar" style="margin:6px 0"><i id="gb" style="width:0%"></i></div>
+     <div class="s">Recolectados <b class="mo" data-k="col">0</b> · intentos reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
+  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
+     <span class="s">P&amp;L REALIZADO (ÉPOCA)</span>
+     <span class="pill ${totalRealized>=10?'ok':'bad'}">${totalRealized>=10?'META OK':'META NO CUMPLIDA'}</span></div>
+     <div class="big ${totalRealized>0?'ok':totalRealized<0?'bad':'di'}" style="margin-top:6px">${totalRealized>0?'+':''}${n2(totalRealized,2)} €</div>
+     <div class="s" style="margin-top:4px">Criterio de dinero real: <b>+1% a +2%/mes</b> en papel</div>
+     ${totalUnval ? `<div class="s wa" style="margin-top:4px">Peor caso con las no valorables a cero:
+        <b>${n2(totalRealized-totalUnval,2)} €</b></div>` : ''}</div>`;
+  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
+     <span class="s">CAPITAL REAL / CUSTODIA</span><span class="pill wa">CONGELADO</span></div>
+     <div class="big" style="margin-top:6px" data-k="cash">0</div>
+     <div class="s" style="margin-top:4px">Ticket fijo <b>${esc(S.money.per_position)} €</b> · sin clave en el VPS</div></div>`;
+  h += '</div>';
+
+  h += `<h2><span>Comparativa A/B · libros independientes</span>
+     <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
+  h += bookCard('screened', S) + bookCard('control', S);
+  h += '</div>';
+
+  h += `<h2><span>Embudo de rechazo y supervivencia on-chain</span></h2><div class="g-books">`;
+  h += `<div class="p"><div class="book-title" style="margin-bottom:6px">Dónde mueren los candidatos</div>`;
+  for (const e of S.envs){
+    const c = S.cash[e] || {};
+    if (!c.stages || !c.stages.length) continue;
+    let max = 1;
+    for (const st of c.stages) max = Math.max(max, (st.pass||0)+(st.fail||0)+(st.unverifiable||0));
+    h += `<div class="scroll-box" style="max-height:230px"><table style="margin-bottom:9px"><thead><tr><th>Etapa (${esc(e)})</th><th class="n">Pass</th>
+      <th class="n">Fail</th><th class="n">Unverif</th><th style="width:26%">Volumen</th></tr></thead><tbody>`;
+    for (const st of c.stages){
+      const tot2 = (st.pass||0)+(st.fail||0)+(st.unverifiable||0);
+      h += `<tr><td class="mo">${esc(st.stage)}</td><td class="num ok">${n2(st.pass||0)}</td>
+        <td class="num bad">${n2(st.fail||0)}</td><td class="num wa">${n2(st.unverifiable||0)}</td>
+        <td><div class="bar kill"><i style="width:${Math.round(100*tot2/max)}%"></i></div></td></tr>`;
     }
-    h += '</div>';
+    h += `</tbody></table></div>`;
   }
   const bl = BK._blocked;
-  if(bl && Object.keys(bl).length){
-    h += '<div class="p"><div class="s" style="margin-bottom:5px"><b>Por qué el libro está '
-      +  'vacío</b> — el motivo medido que se registró en el ledger cada vez que se intentó '
-      +  'entrar:</div><table><tr><th class="n">n</th><th>motivo medido en vivo</th></tr>';
-    for(const k of Object.keys(bl))
-      h += '<tr><td class="num">'+bl[k]+'</td><td class="mo" style="font-size:11.5px">'+esc(k)+'</td></tr>';
-    h += '</table></div>';
+  if (bl && Object.keys(bl).length){
+    h += `<div class="s" style="margin:9px 0 4px"><b>Rechazos en la puerta de liquidez viva</b>
+      (entry_liquidity_live), el motivo medido en cadena:</div>
+      <div class="scroll-box" style="max-height:150px"><table><thead><tr><th class="n">N</th>
+      <th>Motivo medido</th></tr></thead><tbody>`;
+    for (const k of Object.keys(bl))
+      h += `<tr><td class="num bad"><b>${bl[k]}</b></td><td class="mo" style="font-size:11px">${esc(k)}</td></tr>`;
+    h += `</tbody></table></div>`;
   }
-  /* 3 · where they die, with animated bars */
-  h += '<h2>3 · Dónde mueren los candidatos</h2>';
-  for(const e of S.envs){ const c = S.cash[e]||{};
-    h += '<div class="s" style="margin:7px 0 3px">env=<b>'+esc(e)+'</b></div>';
-    if(!c.stages || !c.stages.length){ h += '<div class="p di">todavía sin checks</div>'; continue; }
-    let max = 1; for(const s of c.stages) max = Math.max(max,(s.pass||0)+(s.fail||0)+(s.unverifiable||0));
-    h += '<div class="p"><table style="max-width:660px"><tr><th>etapa</th><th class="n">pass</th>'
-      +  '<th class="n">fail</th><th class="n">?</th><th style="width:34%"></th></tr>';
-    for(const s of c.stages){ const tot=(s.pass||0)+(s.fail||0)+(s.unverifiable||0);
-      h += '<tr><td class="mo">'+esc(s.stage)+'</td><td class="num ok">'+n2(s.pass||0)+'</td>'
-        +  '<td class="num bad">'+n2(s.fail||0)+'</td><td class="num wa">'+n2(s.unverifiable||0)+'</td>'
-        +  '<td><div class="bar kill"><i style="width:'+Math.round(100*tot/max)+'%"></i></div></td></tr>'; }
-    h += '</table></div>';
-  }
+  h += `</div>`;
 
-  /* sparkline of intake by hour, from the candidates we have */
+  h += `<div class="p"><div class="book-title">Curva de decaimiento de liquidez (watch.py)</div>`;
+  const W = S.watch || {}, slots = W.slots || {};
+  const sk2 = Object.keys(slots).sort((a,b) => Number(a) - Number(b));
+  if (sk2.length){
+    h += `<div class="s" style="margin:4px 0 8px">Muestra medida en cadena: <b>${n2(W.measured||0)}</b>
+      pools re-leídos a edad fija tras descubrimiento</div>`;
+    h += `<div class="scroll-box"><table><thead><tr><th>Edad pool</th><th class="n">n</th><th class="n">Vivos ≥500$</th>
+      <th class="n">Retención mediana</th><th style="width:22%">Supervivencia</th></tr></thead><tbody>`;
+    for (const sk of sk2){
+      const sl = slots[sk];
+      const sh = (sl.share_alive === null || sl.share_alive === undefined) ? null : Math.round(sl.share_alive*100);
+      const med = (sl.median_retention === null || sl.median_retention === undefined) ? '—'
+        : (sl.median_retention*100).toFixed(1) + '%';
+      h += `<tr><td class="mo">${esc(sk)} min</td><td class="num">${n2(sl.n)}</td>
+        <td class="num ${sh!==null && sh<50?'bad':'ok'}">${sh!==null?sh+'%':'—'}</td>
+        <td class="num mo">${med}</td>
+        <td><div class="bar"><i style="width:${sh||0}%"></i></div></td></tr>`;
+    }
+    h += `</tbody></table></div>`;
+  } else h += `<div class="s">Sin datos de curva todavía.</div>`;
+
   const byHour = {};
-  for(const c of S.candidates){ const k=(c.discovered||'').slice(0,13); if(k) byHour[k]=(byHour[k]||0)+1; }
+  for (const c of S.candidates || []){ const k = (c.discovered||'').slice(0,13); if (k) byHour[k] = (byHour[k]||0)+1; }
   const keys = Object.keys(byHour).sort().slice(-24);
-  if(keys.length){ const mx = Math.max(...keys.map(k=>byHour[k]));
-    h += '<h2>Entrada de candidatos por hora</h2><div class="p"><div class="spark">';
-    for(const k of keys) h += '<b style="height:'+Math.max(2,Math.round(100*byHour[k]/mx))+'%" title="'
-      + esc(k)+':00Z · '+byHour[k]+'"></b>';
-    h += '</div><div class="s">' + keys[0] + 'Z → ' + keys[keys.length-1] + 'Z · máx '
-      + mx + '/h · ' + keys.reduce((a,k)=>a+byHour[k],0) + ' candidatos</div></div>'; }
-
-  /* 4 · candidates, new ones highlighted */
-  h += '<h2>4 · Candidatos y sus checks obligatorios</h2><div class="p" style="overflow-x:auto"><table>'
-    +  '<tr><th>env</th><th>token</th><th class="n">liq</th><th class="n">edad h</th>'
-    +  '<th class="n">pass</th><th class="n">fail</th><th class="n">?</th>'
-    +  '<th>decisión</th></tr>';
-  let newC = 0;
-  for(const c of S.candidates){
-    const isNew = !LAST_SEEN['c:'+c.id];
-    if(isNew) newC++;
-    const d = c.decision==='enter'?'<span class="pill ok">enter</span>'
-            : c.decision==='skip'?'<span class="pill bad">skip</span>':'<span class="pill di">—</span>';
-    h += '<tr class="'+(isNew&&!FIRST?'rownew':'')+'"><td class="mo">'+esc(c.env)+'</td>'
-      +  '<td class="mo">'+esc(c.symbol||c.id)+'</td><td class="num">'+n2(c.liq)+'</td>'
-      +  '<td class="num">'+n2(c.age_h,2)+'</td><td class="num ok">'+n2(c.n_pass)+'</td>'
-      +  '<td class="num bad">'+n2(c.n_fail)+'</td><td class="num wa">'+n2(c.n_unk)+'</td>'
-      +  '<td>'+d+'</td></tr>';
+  if (keys.length){
+    const mx = Math.max(...keys.map(k => byHour[k]));
+    h += `<div class="s" style="margin-top:11px"><b>Entrada de candidatos por hora</b></div><div class="spark">`;
+    for (const k of keys) h += `<b style="height:${Math.max(4, Math.round(100*byHour[k]/mx))}%"
+      title="${esc(k)}:00Z · ${byHour[k]}"></b>`;
+    h += `</div><div class="s" style="display:flex;justify-content:space-between;margin-top:4px">
+      <span>${keys[0]}Z → ${keys[keys.length-1]}Z</span><span>pico ${mx}/h</span></div>`;
   }
-  h += '</table></div>';
+  h += `</div></div>`;
 
-  /* 5 · decisions, new ones highlighted */
-  h += '<h2>5 · Últimas decisiones, con el mecanismo</h2><div class="p" style="overflow-x:auto"><table>'
-    +  '<tr><th>cuándo</th><th>decisión</th><th>candidato</th><th>mecanismo</th></tr>';
-  let newD = 0;
-  for(const d of S.decisions.slice(0,18)){
-    const isNew = !LAST_SEEN['d:'+d.decision_id];
-    if(isNew) newD++;
-    h += '<tr class="'+(isNew&&!FIRST?'rownew':'')+'"><td class="mo">'+esc(d.decided_at)+'</td>'
-      +  '<td class="mo">'+esc(d.decision)+'</td><td class="mo">'+esc(d.candidate_id)+'</td>'
-      +  '<td class="di">'+esc((d.mechanism||'').slice(0,95))+'</td></tr>';
+  h += `<h2><span>Explorador de candidatos y decisiones</span></h2><div class="g-bottom">`;
+  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+     <div class="book-title">Últimos candidatos cribados</div><div class="fb" id="cand-fb"></div></div>
+     <div id="cand-table-box"></div></div>`;
+  h += `<div class="p"><div class="book-title" style="margin-bottom:6px">Últimas decisiones del motor</div>
+     <div class="scroll-box"><table><thead><tr><th>Cuándo</th><th>Veredicto</th><th>Candidato</th>
+     <th>Mecanismo</th></tr></thead><tbody>`;
+  for (const d of (S.decisions||[]).slice(0,35)){
+    const isNew = !LAST_SEEN['d:' + d.decision_id];
+    const pc = d.decision === 'enter' ? 'ok' : (d.decision === 'skip' ? 'bad' : 'di');
+    h += `<tr class="${isNew && !FIRST ? 'rownew':''}">
+      <td class="mo nw di" style="font-size:11px">${esc((d.decided_at||'').slice(5,19).replace('T',' '))}</td>
+      <td><span class="pill ${pc}">${esc(d.decision)}</span></td>
+      <td class="mo" style="font-size:11px">${esc((d.candidate_id||'').slice(0,16))}…</td>
+      <td class="di" style="font-size:11px">${esc((d.mechanism||'').slice(0,70))}</td></tr>`;
   }
-  h += '</table></div>';
+  h += `</tbody></table></div>
+    <details style="margin-top:9px"><summary class="s" style="cursor:pointer">Tablas hash-chained del
+    ledger (${(S.integrity.tables||[]).length})</summary>
+    <div class="scroll-box" style="max-height:180px;margin-top:6px"><table><thead><tr><th>Tabla</th>
+    <th class="n">Filas</th><th>Guarda append-only</th></tr></thead><tbody>`;
+  for (const t of S.integrity.tables || [])
+    h += `<tr><td class="mo">${esc(t.name)}</td><td class="num">${n2(t.rows)}</td>
+      <td>${t.guarded ? '<span class="ok">BEFORE UPDATE/DELETE</span>' : '<span class="bad">SIN GUARDA</span>'}</td></tr>`;
+  h += `</tbody></table></div></details></div></div>`;
 
   $('#root').innerHTML = h;
-  anim($('[data-k="cash"]'), S.money.net, 2);
-  anim($('[data-k="scr"]'), g.screened);
-  anim($('[data-k="col"]'), g.collected);
-  setTimeout(()=>{ const b=$('#gb'); if(b) b.style.width = pct+'%'; }, 60);
-  for(const book of ['screened','control']){
-    const b = (S.book || {})[book]; if(!b) continue;
-    const q = k => $('[data-k="'+k+'-'+book+'"]');
-    if(q('cap')) anim(q('cap'), b.capital, 0);
-    if(q('av'))  anim(q('av'), b.available, 2);
-    if(q('de'))  anim(q('de'), b.deployed, 2);
-    if(q('fe'))  anim(q('fe'), b.fees, 2);
-  }
-  if(newC||newD) $('#sub').innerHTML = 'entornos: '+esc(S.envs.join(', ')) +
-    (FIRST ? ' · <b>primera carga</b>: '+newC+' candidatos y '+newD+' decisiones en el fichero'
-           : ' · <b class="ok">'+newC+' candidatos y '+newD+' decisiones nuevos desde tu última visita</b>');
+  renderBookPositions('screened', false);
+  renderBookPositions('control', false);
+  renderCandidatesBox();
 
-  for(const c of S.candidates) LAST_SEEN['c:'+c.id]=1;
-  for(const d of S.decisions) LAST_SEEN['d:'+d.decision_id]=1;
-  try{ localStorage.setItem('fomo_seen', JSON.stringify(LAST_SEEN)); }catch(e){}
-  if(S.generated_at) LAST_TS = new Date(S.generated_at).getTime();
+  anim($('[data-k="cash"]'), S.money.net, 2, ' €');
+  anim($('[data-k="scr"]'), g.screened, 0);
+  anim($('[data-k="col"]'), g.collected, 0);
+  setTimeout(() => { const b = $('#gb'); if (b) b.style.width = pctGate + '%'; }, 50);
+  for (const book of ['screened','control']){
+    const b = (S.book||{})[book];
+    if (!b) continue;
+    const q = k => $('[data-k="'+k+'-'+book+'"]');
+    if (q('cap')) anim(q('cap'), b.capital, 0, ' €');
+    if (q('av')) anim(q('av'), b.available, 2, ' €');
+    if (q('de')) anim(q('de'), b.deployed, 2, ' €');
+    if (q('fe')) anim(q('fe'), b.fees, 2, ' €');
+  }
+  for (const c of S.candidates || []) LAST_SEEN['c:' + c.id] = 1;
+  for (const d of S.decisions || []) LAST_SEEN['d:' + d.decision_id] = 1;
+  try { localStorage.setItem('fomo_seen', JSON.stringify(LAST_SEEN)); } catch (e) {}
+  if (S.generated_at) LAST_TS = new Date(S.generated_at).getTime();
+  $('#cad').textContent = (S.generated_at || '');
   FIRST = false;
 }
 
-let LAST_TS = null, LAST_CHECK = null;
-setInterval(()=>{
-  if(!LAST_TS) return;
-  const d = 'datos: hace ' + ago(new Date(LAST_TS).toISOString());
-  const c = LAST_CHECK ? ' · comprobado: hace ' + ago(new Date(LAST_CHECK).toISOString()) : '';
-  $('#age').textContent = d + c;
+setInterval(() => {
+  if (LAST_TS){
+    const ageSec = (Date.now() - LAST_TS) / 1000;
+    const dot = $('#dot');
+    if (dot) dot.className = ageSec > 900 ? 'dot stale' : 'dot';
+    const d = 'Datos: hace ' + ago(new Date(LAST_TS).toISOString());
+    const c = LAST_CHECK ? ' · check: hace ' + ago(new Date(LAST_CHECK).toISOString()) : '';
+    $('#age').textContent = d + c;
+  }
+  const rem = Math.max(0, NEXT_POLL_AT - Date.now());
+  const rb = $('#rbar');
+  if (rb) rb.style.width = Math.min(100, Math.max(0, ((POLL_MS - rem) / POLL_MS) * 100)).toFixed(1) + '%';
 }, 1000);
 
-async function load(){
-  const pass = $('#pw').value || localStorage.getItem('fomo_pw') || '';
-  if(!pass){ $('#gate').style.display='flex'; return; }
-  try{
-    $('#err').textContent='descargando…';
-    const env = await fetchBlob();
-    if(env === null){                                  // 304: the data has not changed
-      LAST_CHECK = new Date();
-      if($('#age')) $('#age').textContent = 'sin cambios desde hace ' +
-        ago(new Date(LAST_TS || LASTFETCH).toISOString()) + ' · comprobado ahora';
-      return;
-    }
-    const st = await deriveAndDecrypt(pass, env);
-    STATE = st;
-    localStorage.setItem('fomo_pw', pass);
-    $('#gate').style.display='none';
-    try{ LAST_SEEN = JSON.parse(localStorage.getItem('fomo_seen')||'{}'); }catch(e){ LAST_SEEN={}; }
+function savedPass(){
+  return $('#pw').value || sessionStorage.getItem('fomo_pw') || localStorage.getItem('fomo_pw') || '';
+}
+async function load(force = false){
+  NEXT_POLL_AT = Date.now() + POLL_MS;
+  const pass = savedPass();
+  if (!pass){ $('#gate').style.display = 'flex'; return; }
+  try {
+    $('#err').textContent = 'Descargando y descifrando el bloque…';
+    const env = await fetchBlob(force);
+    if (env === null){ LAST_CHECK = new Date(); return; }
+    STATE = await deriveAndDecrypt(pass, env);
+    sessionStorage.setItem('fomo_pw', pass);
+    const rem = $('#rem-local');
+    if (rem && rem.checked) localStorage.setItem('fomo_pw', pass);
+    else localStorage.removeItem('fomo_pw');   /* por defecto NO se queda en localStorage */
+    $('#gate').style.display = 'none';
+    try { LAST_SEEN = JSON.parse(localStorage.getItem('fomo_seen') || '{}'); } catch (e){ LAST_SEEN = {}; }
     render();
-    $('#err').textContent='';
-  }catch(e){
-    const msg = String(e && e.message || e);
-    $('#gate').style.display='flex';
+    $('#err').textContent = '';
+  } catch (e){
+    const msg = String((e && e.message) || e);
+    $('#gate').style.display = 'flex';
     $('#err').textContent = /decrypt|OperationError/i.test(msg)
-      ? 'no se pudo descifrar: contraseña incorrecta, o el fichero cambió.'
-      : 'error: '+msg;
+      ? 'No se pudo descifrar: contraseña incorrecta, o el bloque cambió.'
+      : 'Error de red: ' + msg;
   }
 }
-$('#go').addEventListener('click', load);
-$('#pw').addEventListener('keydown', e => { if(e.key==='Enter') load(); });
+$('#go').addEventListener('click', () => load(true));
+$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') load(true); });
+$('#btn-refresh').addEventListener('click', () => load(true));
+$('#btn-lock').addEventListener('click', () => {
+  sessionStorage.removeItem('fomo_pw');
+  localStorage.removeItem('fomo_pw');
+  $('#pw').value = '';
+  $('#gate').style.display = 'flex';
+});
 load();
-setInterval(load, 60000);
-</script></body></html>
+setInterval(() => load(false), POLL_MS);
+</script>
+</body>
+</html>

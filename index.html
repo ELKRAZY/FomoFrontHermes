@@ -625,12 +625,32 @@ setInterval(() => {
   if (rb) rb.style.width = Math.min(100, Math.max(0, ((POLL_MS - rem) / POLL_MS) * 100)).toFixed(1) + '%';
 }, 1000);
 
+const REM_KEY = 'fomo_remember';
+function remIntent(){
+  try { return localStorage.getItem(REM_KEY) === '1'; } catch (e){ return false; }
+}
+function rememberedPass(){
+  try { return remIntent() ? (localStorage.getItem('fomo_pw') || '') : ''; } catch (e){ return ''; }
+}
+function setRemember(on, pass){
+  try {
+    localStorage.setItem(REM_KEY, on ? '1' : '0');
+    if (on && pass) localStorage.setItem('fomo_pw', pass);
+    else localStorage.removeItem('fomo_pw');
+  } catch (e){}
+}
+let PENDING_REM = null;                 /* intención del usuario, se aplica al descifrar bien */
 function savedPass(){
-  return $('#pw').value || sessionStorage.getItem('fomo_pw') || localStorage.getItem('fomo_pw') || '';
+  const typed = $('#pw').value;
+  if (typed) return { pass: typed, fromStore: false };
+  const ses = sessionStorage.getItem('fomo_pw');
+  if (ses) return { pass: ses, fromStore: false };
+  const rem = rememberedPass();
+  return { pass: rem, fromStore: !!rem };
 }
 async function load(force = false){
   NEXT_POLL_AT = Date.now() + POLL_MS;
-  const pass = savedPass();
+  const { pass, fromStore } = savedPass();
   if (!pass){ $('#gate').style.display = 'flex'; return; }
   try {
     $('#err').textContent = 'Descargando y descifrando el bloque…';
@@ -638,30 +658,55 @@ async function load(force = false){
     if (env === null){ LAST_CHECK = new Date(); return; }
     STATE = await deriveAndDecrypt(pass, env);
     sessionStorage.setItem('fomo_pw', pass);
-    const rem = $('#rem-local');
-    if (rem && rem.checked) localStorage.setItem('fomo_pw', pass);
-    else localStorage.removeItem('fomo_pw');   /* por defecto NO se queda en localStorage */
+    /* La casilla REFLEJA lo guardado, no lo cambia. Antes, cada carga con la casilla sin marcar
+       borraba la contraseña del localStorage: se guardaba al enviar y se borraba en la carga
+       siguiente, así que "recordar" no recordaba nunca. Cambiar la persistencia es una acción del
+       usuario (enviar, marcar/desmarcar, bloquear), nunca un efecto de una recarga de fondo. */
+    if (PENDING_REM !== null){ setRemember(PENDING_REM, pass); PENDING_REM = null; }
+    const rb = $('#rem-local');
+    if (rb) rb.checked = remIntent();
     $('#gate').style.display = 'none';
     try { LAST_SEEN = JSON.parse(localStorage.getItem('fomo_seen') || '{}'); } catch (e){ LAST_SEEN = {}; }
     render();
     $('#err').textContent = '';
   } catch (e){
     const msg = String((e && e.message) || e);
+    const badKey = /decrypt|OperationError/i.test(msg);
+    if (badKey && fromStore){
+      /* La contraseña guardada ya no abre el bloque (se cambió, o el blob se regeneró con otra):
+         se borra, para no dejar al navegador reintentando una clave muerta en cada visita. */
+      setRemember(false, '');
+      const rb2 = $('#rem-local'); if (rb2) rb2.checked = false;
+      $('#pw').value = '';
+    }
     $('#gate').style.display = 'flex';
-    $('#err').textContent = /decrypt|OperationError/i.test(msg)
-      ? 'No se pudo descifrar: contraseña incorrecta, o el bloque cambió.'
+    $('#err').textContent = badKey
+      ? (fromStore ? 'La contraseña guardada ya no abre el bloque. Escríbela otra vez.'
+                   : 'No se pudo descifrar: contraseña incorrecta, o el bloque cambió.')
       : 'Error de red: ' + msg;
   }
 }
-$('#go').addEventListener('click', () => load(true));
-$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') load(true); });
+function submitPass(){
+  const rb = $('#rem-local');
+  PENDING_REM = !!(rb && rb.checked);   /* se guarda solo si el descifrado sale bien */
+  load(true);
+}
+$('#go').addEventListener('click', submitPass);
+$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') submitPass(); });
 $('#btn-refresh').addEventListener('click', () => load(true));
+$('#rem-local').addEventListener('change', e => {
+  const p = $('#pw').value || sessionStorage.getItem('fomo_pw') || rememberedPass();
+  if (e.target.checked && !p){ try { localStorage.setItem(REM_KEY, '1'); } catch (x){} return; }
+  setRemember(e.target.checked, p);
+});
 $('#btn-lock').addEventListener('click', () => {
   sessionStorage.removeItem('fomo_pw');
-  localStorage.removeItem('fomo_pw');
+  setRemember(false, '');
+  const rb = $('#rem-local'); if (rb) rb.checked = false;
   $('#pw').value = '';
   $('#gate').style.display = 'flex';
 });
+$('#rem-local').checked = remIntent();
 load();
 setInterval(() => load(false), POLL_MS);
 </script>

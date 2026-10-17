@@ -140,6 +140,31 @@ footer{margin-top:26px;color:var(--di);font-size:11px;border-top:1px solid var(-
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px}
 .nw{white-space:nowrap}
+
+/* Tira del motor: una o dos lineas y nunca mas. Borde izquierdo verde si el ciclo es reciente,
+   ambar si lleva mas de 20 min (o si no hay dato): la duda "esta vivo o colgado" se responde ahi. */
+.eng{display:flex;gap:6px 16px;flex-wrap:wrap;justify-content:space-between;align-items:center;
+  padding:7px 11px;margin:0 0 8px;font:11.5px/1.5 var(--mo);background:var(--pa2);
+  border:1px solid var(--li);border-left:3px solid var(--ok);border-radius:10px}
+.eng.stale{border-left-color:var(--wa)}
+.eng b{font-weight:600;color:var(--tx)}
+.seg{display:inline-flex;border:1px solid var(--li);border-radius:8px;overflow:hidden;flex-wrap:nowrap}
+.seg button{background:transparent;border:0;color:var(--di);font:600 10.5px var(--mo);
+  padding:4px 8px;cursor:pointer}
+.seg button.on{background:var(--ac);color:#fff}
+.seg button+button{border-left:1px solid var(--li)}
+.badge-mode.bad{background:rgba(255,77,109,.16);border-color:var(--bad);color:#ff9db0}
+.ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px;margin:8px 0 4px}
+.ep-it .l{font-size:9.5px;color:var(--di);text-transform:uppercase;letter-spacing:.05em}
+.ep-it .v{font:600 12.5px/1.3 var(--mo);margin-top:1px}
+@media(max-width:520px){
+  .g-kpi{grid-template-columns:1fr 1fr}.g-kpi .big{font-size:19px}
+  #meta{display:none}                 /* "data/ledger.sqlite" no aporta y empujaba los botones */
+  header{padding:8px 12px;gap:6px}
+  .hdr-right{gap:6px}
+  h1{font-size:14px}
+}
+details.p summary::-webkit-details-marker{color:var(--ac)}
 </style>
 </head>
 <body>
@@ -166,6 +191,7 @@ code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px
       <div class="s" id="sub" style="width:100%">Conectando con el registro…</div>
     </div>
     <div class="hdr-right">
+      <span class="badge-mode" id="sha-badge" title="cadena append-only">SHA …</span>
       <div class="status-pill">
         <span class="dot" id="dot"></span>
         <div>
@@ -178,6 +204,12 @@ code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px
     </div>
     <div class="refresh-track"><div class="refresh-bar" id="rbar"></div></div>
   </header>
+
+  <div id="engine" class="eng"></div>
+  <div id="period-bar" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px">
+    <span class="s">Periodo de las tablas <span class="di" id="period-note"></span></span>
+    <span class="seg" id="seg-period"></span>
+  </div>
 
   <div id="warn"></div>
   <div id="root"></div>
@@ -203,6 +235,65 @@ let LAST_TS = null, LAST_CHECK = null, NEXT_POLL_AT = Date.now() + POLL_MS;
 const PFILTER = { screened: 'all', control: 'all' };
 const PSEARCH = { screened: '', control: '' };
 let CAND_FILTER = 'all';
+/* Periodo de las tablas. Un solo selector global (Hoy/7d/30d/Época) para no llenar el movil de
+   grupos de controles: los libros conservan su fila de estado + buscador, y esto solo acota fechas.
+   NUNCA cruza la frontera de epoca: effective = max(inicio de epoca, ahora - ventana). Mezclar la
+   epoca 1 (con los defectos de antes del 16-oct) con la 2 rompe la contabilidad. */
+let PERIOD = 'epoch';
+const PERIODS = [['24h', 'Hoy'], ['7d', '7 d'], ['30d', '30 d'], ['epoch', 'Época']];
+function periodSince(){
+  if (PERIOD === 'epoch') return null;
+  const h = PERIOD === '24h' ? 24 : (PERIOD === '7d' ? 168 : 720);
+  return Date.now() - h * 3600 * 1000;
+}
+function periodCut(){
+  const cut = periodSince();
+  const ep = STATE && STATE.epoch && STATE.epoch.start
+    ? new Date(STATE.epoch.start).getTime() : 0;
+  return Math.max(cut || 0, ep || 0);
+}
+function periodLabel(){
+  const p = PERIODS.find(x => x[0] === PERIOD);
+  return p ? p[1] : 'Época';
+}
+window.setPeriod = function(k){
+  PERIOD = k;
+  paintSeg();
+  renderBookPositions('screened', true);
+  renderBookPositions('control', true);
+  renderCandidatesBox();
+};
+function paintSeg(){
+  const sp = $('#seg-period');
+  if (sp) sp.innerHTML = PERIODS.map(([k, l]) =>
+    `<button class="${PERIOD === k ? 'on' : ''}" onclick="setPeriod('${k}')">${l}</button>`).join('');
+  const note = $('#period-note');
+  if (note && STATE && STATE.epoch && STATE.epoch.start){
+    const cut = periodCut();
+    note.textContent = (cut && cut > (periodSince() || 0))
+      ? '· acotado al inicio de la época' : '';
+  }
+}
+
+/* La tira del motor: si el ciclo es de hace mas de 20 min, en ambar. Dice por que no abre. */
+function renderEngine(S){
+  const e = S.engine || {};
+  const box = $('#engine');
+  if (!box) return;
+  const ageMin = e.last_cycle_at ? (Date.now() - new Date(e.last_cycle_at).getTime()) / 60000 : null;
+  const stale = ageMin === null || ageMin > 20;
+  box.className = 'eng' + (stale ? ' stale' : '');
+  const tr = e.top_reject_1h
+    ? `${esc(String(e.top_reject_1h.mechanism || '').replace(/^(free|chain)_kill:/, ''))} ×${n2(e.top_reject_1h.n)}`
+    : '—';
+  const book = e.last_open_book === 'screened' ? 'estrategia'
+    : (e.last_open_book === 'control' ? 'control' : '—');
+  box.innerHTML =
+    `<span><span class="dot${stale ? ' stale' : ''}"></span> Ciclo ${ageMin === null ? '—' : 'hace ' + ago(e.last_cycle_at)}`
+    + ` · 1 h: <b>${n2(e.candidates_1h)}</b> nuevos / <b>${n2(e.screened_1h)}</b> cribados`
+    + ` · <b>${n2(e.opens_1h)}</b> abiertas</span>`
+    + `<span>Freno: <b>${tr}</b> · últ. apertura ${e.last_open_at ? ago(e.last_open_at) : '—'} (${esc(book)})</span>`;
+}
 
 const PF_BUCKET = p => p.state === 'abierta' ? 'open' : ((p.pnl || 0) > 0 ? 'win' : 'loss');
 
@@ -299,9 +390,23 @@ function renderBookPositions(book, animateBox = false){
   let rows = fKey === 'all' ? P : P.filter(p => PF_BUCKET(p) === fKey);
   if (q){
     rows = rows.filter(p =>
+      String(p.symbol || '').toLowerCase().includes(q) ||
       String(p.position || '').toLowerCase().includes(q) ||
       String(p.why || '').toLowerCase().includes(q) ||
       String(p.venue || '').toLowerCase().includes(q));
+  }
+  /* Periodo: nunca cruza el inicio de la epoca. Una posicion ABIERTA no se oculta aunque su
+     apertura caiga fuera de la ventana: es riesgo vivo, y esconderla seria maquillar el libro. */
+  const cutP = periodCut();
+  let fueraVentana = 0;
+  if (cutP){
+    const keep = [];
+    for (const p of rows){
+      const t = p.opened ? new Date(p.opened).getTime() : 0;
+      if (!t || t >= cutP) keep.push(p);
+      else if (p.state === 'abierta'){ keep.push(p); fueraVentana++; }
+    }
+    rows = keep;
   }
 
   const box = $('#pos-box-' + book);
@@ -319,30 +424,33 @@ function renderBookPositions(book, animateBox = false){
       if (p.pnl !== null) spl += p.pnl;
     }
     h += `<div class="s" style="margin:3px 0 6px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">`
-      +  `<span>Mostrando <b>${rows.length}</b> de ${P.length} · coste <b>${n2(sc,2)} €</b> · valor de salida <b>${n2(sv,2)} €</b></span>`
-      +  `<span>Subtotal P&amp;L <b class="${spl>0?'ok':spl<0?'bad':'di'}">${spl>0?'+':''}${n2(spl,2)} €</b>`
-      +  (sinprecio ? ` · <span class="wa">${sinprecio} sin precio de salida</span>` : '')
+      +  `<span>Mostrando <b>${rows.length}</b> de ${P.length}${PERIOD === 'epoch' ? '' : ' · ' + periodLabel()}`
+      +  ` · coste <b>${n2(sc, 2)} €</b> · valor <b>${n2(sv, 2)} €</b></span>`
+      +  `<span>Subtotal P&amp;L <b class="${spl > 0 ? 'ok' : spl < 0 ? 'bad' : 'di'}">${spl > 0 ? '+' : ''}${n2(spl, 2)} €</b>`
+      +  (sinprecio ? ` · <span class="wa">${sinprecio} s/p</span>` : '')
+      +  (fueraVentana ? ` · <span class="wa">${fueraVentana} abierta(s) fuera de ventana</span>` : '')
       +  `</span></div>`;
-    h += `<div class="scroll-box ${animateBox?'fade-in':''}"><table><thead><tr>`
-      +  `<th>Estado</th><th>Token</th><th>Abierta</th><th class="n">Coste €</th>`
-      +  `<th class="n">Valor €</th><th class="n">P&amp;L €</th><th class="n">%</th><th>Salida</th>`
+    /* 4 columnas: en 390 px caben sin scroll lateral. El coste va al tooltip (es fijo, 5 EUR) y el
+       P&L lleva su % debajo. */
+    h += `<div class="scroll-box ${animateBox ? 'fade-in' : ''}"><table><thead><tr>`
+      +  `<th>Token · hora</th><th class="n">Valor</th><th class="n">P&amp;L</th><th>Salida</th>`
       +  `</tr></thead><tbody>`;
     for (const p of rows){
       const isOpen = p.state === 'abierta';
       const pl = p.pnl;
-      const stPill = isOpen ? '<span class="pill wa">abierta</span>'
-        : ((pl || 0) > 0 ? '<span class="pill ok">ganada</span>' : '<span class="pill bad">cerrada</span>');
-      const tok = String(p.position || '').split(':').slice(2, 4).join(':') || p.position || '';
-      const short = tok.length > 17 ? tok.slice(0, 9) + '…' + tok.slice(-6) : tok;
-      h += `<tr title="${esc((p.venue||'') + (p.val_src ? ' · ' + p.val_src : ''))}">`
-        +  `<td>${stPill}</td>`
-        +  `<td class="mo nw" style="font-size:11px">${esc(short)}</td>`
-        +  `<td class="mo nw di" style="font-size:11px">${esc((p.opened||'').slice(5,16).replace('T',' '))}</td>`
-        +  `<td class="num">${n2(p.cost,2)}</td>`
-        +  `<td class="num">${p.value===null?'<span class="wa" title="Sin precio de salida medible">s/p</span>':n2(p.value,2)}</td>`
-        +  `<td class="num ${pl>0?'ok':pl<0?'bad':'di'}">${pl===null?'—':(pl>0?'+':'')+n2(pl,2)}</td>`
-        +  `<td class="num ${(p.ret||0)>0?'ok':(p.ret||0)<0?'bad':'di'}">${p.ret===null?'—':(p.ret>0?'+':'')+n2(p.ret*100,1)+'%'}</td>`
-        +  `<td class="di" style="font-size:11px">${esc(p.why||'—')}</td></tr>`;
+      const stPill = isOpen ? '<span class="pill wa">ab</span>'
+        : ((pl || 0) > 0 ? '<span class="pill ok">gan</span>' : '<span class="pill bad">per</span>');
+      const sym = p.symbol || (String(p.position || '').split(':')[3] || '').slice(0, 10);
+      h += `<tr title="coste ${n2(p.cost, 2)} € · ${esc(p.venue || '')}${p.val_src ? ' · ' + esc(p.val_src) : ''}">`
+        +  `<td><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">${stPill}`
+        +  `<b class="mo" style="font-size:11.5px">${esc(sym)}</b></div>`
+        +  `<div class="di" style="font-size:10.5px">${esc((p.opened || '').slice(5, 16).replace('T', ' '))}</div></td>`
+        +  `<td class="num">${p.value === null ? '<span class="wa" title="Sin precio de salida medible">s/p</span>' : n2(p.value, 2)}</td>`
+        +  `<td class="num ${pl > 0 ? 'ok' : pl < 0 ? 'bad' : 'di'}">${pl === null ? '—' : (pl > 0 ? '+' : '') + n2(pl, 2)}`
+        +  (p.ret !== null && p.ret !== undefined
+            ? `<div class="s" style="font-size:10px">${p.ret > 0 ? '+' : ''}${n2(p.ret * 100, 1)}%</div>` : '')
+        +  `</td>`
+        +  `<td class="di" style="font-size:10.5px">${esc(String(p.why || '—').slice(0, 42))}</td></tr>`;
     }
     h += `</tbody></table></div>`;
   }
@@ -354,7 +462,13 @@ function renderCandidatesBox(){
   const box = $('#cand-table-box');
   if (!box) return;
   const all = STATE.candidates || [];
-  const filtered = CAND_FILTER === 'all' ? all : all.filter(c => {
+  /* El payload trae los ULTIMOS 120 candidatos, no la historia: aplicarles un filtro de 7 d o 30 d
+     seria mentir (el array cubre ~1 h). Se dice lo que hay y desde cuando. */
+  const cut = periodCut();
+  const base = cut ? all.filter(c => !c.discovered || new Date(c.discovered).getTime() >= cut) : all;
+  const ds = all.map(c => c.discovered).filter(Boolean).sort();
+  const oldest = ds[0] || null;
+  const filtered = CAND_FILTER === 'all' ? base : base.filter(c => {
     if (CAND_FILTER === 'enter') return c.decision === 'enter';
     if (CAND_FILTER === 'pass_some') return (c.n_pass || 0) > 0;
     if (CAND_FILTER === 'skip') return c.decision === 'skip';
@@ -363,23 +477,29 @@ function renderCandidatesBox(){
   const fbt = $('#cand-fb');
   if (fbt){
     fbt.innerHTML =
-      `<button class="${CAND_FILTER==='all'?'on':''}" onclick="setCandFilter('all')">Todos <span class="cnt">${all.length}</span></button>`
-    + `<button class="win ${CAND_FILTER==='enter'?'on':''}" onclick="setCandFilter('enter')">Entradas <span class="cnt">${all.filter(x=>x.decision==='enter').length}</span></button>`
-    + `<button class="${CAND_FILTER==='pass_some'?'on':''}" onclick="setCandFilter('pass_some')">Con checks pass <span class="cnt">${all.filter(x=>(x.n_pass||0)>0).length}</span></button>`;
+      `<button class="${CAND_FILTER==='all'?'on':''}" onclick="setCandFilter('all')">Todos <span class="cnt">${base.length}</span></button>`
+    + `<button class="win ${CAND_FILTER==='enter'?'on':''}" onclick="setCandFilter('enter')">Entradas <span class="cnt">${base.filter(x=>x.decision==='enter').length}</span></button>`
+    + `<button class="${CAND_FILTER==='pass_some'?'on':''}" onclick="setCandFilter('pass_some')">Con checks pass <span class="cnt">${base.filter(x=>(x.n_pass||0)>0).length}</span></button>`;
   }
-  let h = `<div class="scroll-box tall"><table><thead><tr><th>Env</th><th>Token</th>`
-    + `<th class="n">Liq USD</th><th class="n">Edad h</th><th class="n">Pass</th><th class="n">Fail</th>`
-    + `<th class="n">?</th><th>Decisión</th></tr></thead><tbody>`;
+  let h = `<div class="s" style="margin:2px 0 6px">Mostrando <b>${filtered.length}</b> de ${base.length}`
+    + `${PERIOD === 'epoch' ? '' : ' · ' + periodLabel()}`
+    + ` · el panel recibe los últimos ${all.length}, desde ${esc((oldest || '').slice(11, 16))}Z: no hay historia de días aquí</div>`;
+  /* 5 columnas: P/F/? juntos y la decisión con su mecanismo debajo (eso sustituye a la tabla de
+     decisiones, donde 34 de 40 filas eran el mismo free_kill:volume_h24). */
+  h += `<div class="scroll-box tall"><table><thead><tr><th>Token</th><th class="n">Liq</th>`
+    + `<th class="n">Edad</th><th class="n">P/F/?</th><th>Decisión</th></tr></thead><tbody>`;
   for (const c of filtered){
     const isNew = !LAST_SEEN['c:' + c.id];
     const d = c.decision==='enter' ? '<span class="pill ok">enter</span>'
             : c.decision==='skip' ? '<span class="pill bad">skip</span>' : '<span class="pill di">—</span>';
     h += `<tr class="${isNew && !FIRST ? 'rownew':''}" title="${esc(c.reason || c.id)}">`
-      +  `<td class="mo">${esc(c.env)}</td>`
-      +  `<td class="mo"><b>${esc(c.symbol || c.id.slice(0,12))}</b></td>`
-      +  `<td class="num">${n2(c.liq,0)}</td><td class="num">${n2(c.age_h,2)}</td>`
-      +  `<td class="num ok">${n2(c.n_pass)}</td><td class="num bad">${n2(c.n_fail)}</td>`
-      +  `<td class="num wa">${n2(c.n_unk)}</td><td>${d}</td></tr>`;
+      +  `<td><b class="mo" style="font-size:11px">${esc(c.symbol || c.id.slice(0, 10))}</b>`
+      +  `<div class="di" style="font-size:10px">${esc(c.env)}</div></td>`
+      +  `<td class="num">${n2(c.liq, 0)}</td>`
+      +  `<td class="num">${n2(c.age_h, 1)}h</td>`
+      +  `<td class="num"><span class="ok">${n2(c.n_pass)}</span><span class="di">/</span>`
+      +  `<span class="bad">${n2(c.n_fail)}</span><span class="di">/</span><span class="wa">${n2(c.n_unk)}</span></td>`
+      +  `<td>${d}${c.mechanism ? `<div class="di" style="font-size:10px">${esc(c.mechanism)}</div>` : ''}</td></tr>`;
   }
   h += `</tbody></table></div>`;
   box.innerHTML = h;
@@ -422,11 +542,9 @@ function bookCard(book, S){
       responde getReserves y no se inventa). Este libro, realizado y también en el peor caso:
       <b>${n2(b.realized,2)} €</b> → <b>${n2(b.realized_if_unvalued_are_zero,2)} €</b>.</div>`;
   }
-  h += `<div class="wedge" style="border-color:#3d3360;background:rgba(99,102,241,.10);color:#cfd2ff">
-     El "mark" de las abiertas sale de la fórmula de venta del propio pool (producto constante, con
-     el impacto de nuestra orden), no del precio spot: cobertura <b>${marked} de ${openAll}</b>
-     abiertas valoradas. <b>Es una marca, no dinero</b>: el criterio de capital real se juzga sobre
-     el realizado.</div>`;
+  h += `<div class="wedge" style="border-color:#3d3360;background:rgba(99,102,241,.10);color:#cfd2ff"
+     title="El mark sale de la fórmula de venta del pool (producto constante con el impacto de nuestra orden), no del spot. Cobertura ${marked} de ${openAll} abiertas. Es una marca, no dinero: el criterio se juzga sobre el realizado.">
+     Mark de abiertas: <b>${marked}/${openAll}</b> valoradas por la fórmula del pool · <b>marca, no dinero</b></div>`;
   h += `<div class="fb-row"><div class="fb" id="fb-${book}"></div>
     <input class="search-in" type="search" placeholder="Filtrar token/motivo…"
       value="${esc(PSEARCH[book])}" oninput="setBookSearch('${book}', this.value)"></div>
@@ -438,10 +556,21 @@ function render(){
   const S = STATE;
   if (!S) return;
   $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
-    + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · dinero real congelado hasta +1-2%/mes en papel`;
+    + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · papel, sin dinero real`;
   $('#age').textContent = 'Datos: hace ' + ago(S.generated_at);
   LAST_TS = S.generated_at;
   $('#meta').textContent = S.ledger;
+  // La integridad, en el badge del header: en el movil ocupaba un KPI entero y casi nunca cambia.
+  const sb = $('#sha-badge');
+  if (sb){
+    const nt = (S.integrity.tables || []).length;
+    const nr = (S.integrity.tables || []).reduce((a, t) => a + (t.rows || 0), 0);
+    sb.textContent = S.integrity.ok ? 'SHA-256 ✓' : 'SHA-256 ✗';
+    sb.className = 'badge-mode' + (S.integrity.ok ? '' : ' bad');
+    sb.title = `${nt} tablas encadenadas · ${nr.toLocaleString('es-ES')} filas append-only`;
+  }
+  renderEngine(S);
+  paintSeg();
   const w = $('#warn');
   if (!S.integrity.ok){
     w.style.display = 'block';
@@ -458,45 +587,60 @@ function render(){
   const rows = (S.integrity.tables || []).reduce((a,t) => a + (t.rows || 0), 0);
 
   let h = '<div class="g-kpi">';
-  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">INTEGRIDAD SHA-256</span>
-     <span class="pill ${S.integrity.ok?'ok':'bad'}">${S.integrity.ok?'VERIFICADO':'CORRUPTO'}</span></div>
-     <div class="big ${S.integrity.ok?'ok':'bad'}" style="margin-top:6px">${(S.integrity.tables||[]).length}/${(S.integrity.tables||[]).length} OK</div>
-     <div class="s" style="margin-top:4px">${rows.toLocaleString('es-ES')} filas encadenadas (append-only)</div></div>`;
+  /* Dos KPIs, no cuatro: la integridad pasa al badge del header (si se rompe, ya sale #warn) y la
+     custodia al pie del KPI de P&L. En 390 px cuatro tarjetas empujaban todo lo demas fuera de la
+     primera pantalla. */
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
      <span class="s">EMBUDO DE CRIBADO</span><span class="mo s">${pctGate}%</span></div>
      <div class="big" style="margin-top:6px"><span data-k="scr">0</span><span class="di" style="font-size:14px">/${g.target}</span></div>
      <div class="bar ok-bar" style="margin:6px 0"><i id="gb" style="width:0%"></i></div>
-     <div class="s">Recolectados <b class="mo" data-k="col">0</b> · intentos reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
+     <div class="s">Recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">P&amp;L REALIZADO (ÉPOCA)</span>
-     <span class="pill ${totalRealized>=10?'ok':'bad'}">${totalRealized>=10?'META OK':'META NO CUMPLIDA'}</span></div>
+     <span class="s">P&amp;L REALIZADO · ÉPOCA</span>
+     <span class="pill ${totalRealized>=10?'ok':'bad'}" title="criterio +1% a +2%/mes sobre 1.000 EUR en papel">${totalRealized>=10?'META ✓':'META ✗'}</span></div>
      <div class="big ${totalRealized>0?'ok':totalRealized<0?'bad':'di'}" style="margin-top:6px">${totalRealized>0?'+':''}${n2(totalRealized,2)} €</div>
-     <div class="s" style="margin-top:4px">Criterio de dinero real: <b>+1% a +2%/mes</b> en papel</div>
+     <div class="s" style="margin-top:4px">Criterio: <b>+1% a +2%/mes</b> · capital real
+        <b class="mo" data-k="cash">0</b> <span class="di">congelado · ticket ${esc(S.money.per_position)} €</span></div>
      ${totalUnval ? `<div class="s wa" style="margin-top:4px">Peor caso con las no valorables a cero:
         <b>${n2(totalRealized-totalUnval,2)} €</b></div>` : ''}</div>`;
-  h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">CAPITAL REAL / CUSTODIA</span><span class="pill wa">CONGELADO</span></div>
-     <div class="big" style="margin-top:6px" data-k="cash">0</div>
-     <div class="s" style="margin-top:4px">Ticket fijo <b>${esc(S.money.per_position)} €</b> · sin clave en el VPS</div></div>`;
   h += '</div>';
-
-  const pe = (S.epoch && S.epoch.prev) || null;
-  if (pe) {
-    const corr = pe.net_corrected_eur || 0;
-    h += `<div class="p" style="margin-top:10px;padding:9px 12px">`
-      + `<div class="s" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">`
-      + `<span>Época 1 CERRADA ${esc((pe.closed_at || '').slice(0, 10))} · <b>${n2(pe.positions)}</b> posiciones · corregido <b class="${corr < 0 ? 'bad' : 'ok'}">${corr > 0 ? '+' : ''}${n2(corr, 2)} €</b></span>`
-      + `<span title="El registro dice ${n2(pe.net_recorded_eur, 2)} €. Una posición del 2026-10-13 se escribió con un error de unidades de 10⁹: el registro no se toca (append-only), la corrección va al lado.">registro ${n2(pe.net_recorded_eur, 2)} € · corregido ${n2(corr, 2)} € ⓘ</span>`
-      + `</div></div>`;
-  }
 
   h += `<h2><span>Comparativa A/B · libros independientes</span>
      <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
   h += bookCard('screened', S) + bookCard('control', S);
   h += '</div>';
 
-  h += `<h2><span>Embudo de rechazo y supervivencia on-chain</span></h2><div class="g-books">`;
+  h += `<h2><span>Épocas cerradas</span><span class="s">${(S.epochs || []).length} en el registro</span></h2>`;
+  /* Un <details> por época, colapsado. Manda la cifra CORREGIDA: la del registro incluye el fill con
+     error de unidades de 10^9 del 13-oct, y sin corregir "la mejor" seria ese fill. Las dos se ven. */
+  for (const e of (S.epochs || [])){
+    const corr = e.net_corrected_eur || 0, rec = e.net_recorded_eur || 0;
+    const sg = x => (x === null || x === undefined) ? '—' : (x > 0 ? '+' : '') + n2(x, 2);
+    h += `<details class="p" style="margin-bottom:8px;padding:0">`
+      + `<summary style="cursor:pointer;padding:9px 12px;font-size:11.5px;display:flex;gap:4px 12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline">`
+      + `<span>📦 <b>${esc(e.label)}</b> <span class="di">${esc((e.start || '').slice(0, 10))} → ${esc((e.closed_at || '').slice(0, 10))}</span>`
+      + ` · <b>${n2(e.positions)}</b> pos · corregido <b class="${corr < 0 ? 'bad' : 'ok'}">${sg(corr)} €</b>`
+      + ` · <b>${sg(e.expectancy_eur)} €</b>/pos</span>`
+      + `<span class="di">registro ${sg(rec)} €</span></summary>`
+      + `<div style="padding:0 12px 10px"><div class="ep-grid">`
+      + [['cerradas', n2(e.closed)], ['ganadoras', n2(e.winners)], ['coste', n2(e.cost_eur, 2) + ' €'],
+         ['mejor', sg(e.best_eur) + ' €'], ['mediana', sg(e.median_eur) + ' €'], ['cola', n2(e.tail, 2)],
+         ['esperanza', sg(e.expectancy_eur) + ' €'], ['registro', sg(rec) + ' €']]
+        .map(([l, v]) => `<div class="ep-it"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('')
+      + `</div>`
+      + `<table style="margin-top:6px"><thead><tr><th>Mejores</th><th class="n">P&amp;L €</th><th class="n">%</th></tr></thead><tbody>`
+      + (e.top || []).map(t => `<tr><td class="mo" style="font-size:11px">${esc(t.symbol || '—')} <span class="di">${esc(t.book || '')}</span></td>`
+          + `<td class="num ok">${sg(t.pnl_eur)}</td><td class="num ok">${n2(t.ret_pct, 1)}%</td></tr>`).join('')
+      + `</tbody></table>`
+      + `<table style="margin-top:6px"><thead><tr><th>Peores</th><th class="n">P&amp;L €</th><th class="n">%</th></tr></thead><tbody>`
+      + (e.bottom || []).map(t => `<tr><td class="mo" style="font-size:11px">${esc(t.symbol || '—')} <span class="di">${esc(t.book || '')}</span></td>`
+          + `<td class="num bad">${sg(t.pnl_eur)}</td><td class="num bad">${n2(t.ret_pct, 1)}%</td></tr>`).join('')
+      + `</tbody></table>`
+      + `<div class="s" style="margin-top:6px">congelada en <code>${esc(e.statement || '')}</code>`
+      + (e.still_open ? ` · ${e.still_open} sin cerrar` : '') + `</div></div></details>`;
+  }
+
+  h += `<h2><span>Embudo de rechazo y supervivencia on-chain</span><span class="s">últimos 7 días</span></h2><div class="g-books">`;
   h += `<div class="p"><div class="book-title" style="margin-bottom:6px">Dónde mueren los candidatos</div>`;
   for (const e of S.envs){
     const c = S.cash[e] || {};
@@ -559,31 +703,20 @@ function render(){
   }
   h += `</div></div>`;
 
-  h += `<h2><span>Explorador de candidatos y decisiones</span></h2><div class="g-bottom">`;
+  h += `<h2><span>Explorador de candidatos</span></h2>`;
+  /* Una sola caja: la tabla de decisiones era 34 de 40 filas con el mismo volume_h24, asi que el
+     mecanismo se pinta en la propia fila del candidato y la tabla aparte desaparece. */
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
      <div class="book-title">Últimos candidatos cribados</div><div class="fb" id="cand-fb"></div></div>
      <div id="cand-table-box"></div></div>`;
-  h += `<div class="p"><div class="book-title" style="margin-bottom:6px">Últimas decisiones del motor</div>
-     <div class="scroll-box"><table><thead><tr><th>Cuándo</th><th>Veredicto</th><th>Candidato</th>
-     <th>Mecanismo</th></tr></thead><tbody>`;
-  for (const d of (S.decisions||[]).slice(0,35)){
-    const isNew = !LAST_SEEN['d:' + d.decision_id];
-    const pc = d.decision === 'enter' ? 'ok' : (d.decision === 'skip' ? 'bad' : 'di');
-    h += `<tr class="${isNew && !FIRST ? 'rownew':''}">
-      <td class="mo nw di" style="font-size:11px">${esc((d.decided_at||'').slice(5,19).replace('T',' '))}</td>
-      <td><span class="pill ${pc}">${esc(d.decision)}</span></td>
-      <td class="mo" style="font-size:11px">${esc((d.candidate_id||'').slice(0,16))}…</td>
-      <td class="di" style="font-size:11px">${esc((d.mechanism||'').slice(0,70))}</td></tr>`;
-  }
-  h += `</tbody></table></div>
-    <details style="margin-top:9px"><summary class="s" style="cursor:pointer">Tablas hash-chained del
-    ledger (${(S.integrity.tables||[]).length})</summary>
+  h += `<div class="p" style="margin-top:10px"><details><summary class="s" style="cursor:pointer">Tablas
+    hash-chained del ledger (${(S.integrity.tables || []).length})</summary>
     <div class="scroll-box" style="max-height:180px;margin-top:6px"><table><thead><tr><th>Tabla</th>
     <th class="n">Filas</th><th>Guarda append-only</th></tr></thead><tbody>`;
   for (const t of S.integrity.tables || [])
     h += `<tr><td class="mo">${esc(t.name)}</td><td class="num">${n2(t.rows)}</td>
       <td>${t.guarded ? '<span class="ok">BEFORE UPDATE/DELETE</span>' : '<span class="bad">SIN GUARDA</span>'}</td></tr>`;
-  h += `</tbody></table></div></details></div></div>`;
+  h += `</tbody></table></div></details></div>`;
 
   $('#root').innerHTML = h;
   renderBookPositions('screened', false);

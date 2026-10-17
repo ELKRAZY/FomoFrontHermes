@@ -481,6 +481,16 @@ function render(){
      <div class="s" style="margin-top:4px">Ticket fijo <b>${esc(S.money.per_position)} €</b> · sin clave en el VPS</div></div>`;
   h += '</div>';
 
+  const pe = (S.epoch && S.epoch.prev) || null;
+  if (pe) {
+    const corr = pe.net_corrected_eur || 0;
+    h += `<div class="p" style="margin-top:10px;padding:9px 12px">`
+      + `<div class="s" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">`
+      + `<span>Época 1 CERRADA ${esc((pe.closed_at || '').slice(0, 10))} · <b>${n2(pe.positions)}</b> posiciones · corregido <b class="${corr < 0 ? 'bad' : 'ok'}">${corr > 0 ? '+' : ''}${n2(corr, 2)} €</b></span>`
+      + `<span title="El registro dice ${n2(pe.net_recorded_eur, 2)} €. Una posición del 2026-10-13 se escribió con un error de unidades de 10⁹: el registro no se toca (append-only), la corrección va al lado.">registro ${n2(pe.net_recorded_eur, 2)} € · corregido ${n2(corr, 2)} € ⓘ</span>`
+      + `</div></div>`;
+  }
+
   h += `<h2><span>Comparativa A/B · libros independientes</span>
      <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
   h += bookCard('screened', S) + bookCard('control', S);

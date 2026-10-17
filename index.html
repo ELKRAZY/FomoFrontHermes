@@ -157,13 +157,15 @@ code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px
 .ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:7px;margin:8px 0 4px}
 .ep-it .l{font-size:9.5px;color:var(--di);text-transform:uppercase;letter-spacing:.05em}
 .ep-it .v{font:600 12.5px/1.3 var(--mo);margin-top:1px}
-@media(max-width:520px){
+@media(max-width:540px){
   .g-kpi{grid-template-columns:1fr 1fr}.g-kpi .big{font-size:19px}
   #meta{display:none}                 /* "data/ledger.sqlite" no aporta y empujaba los botones */
+  .lbl{display:none}                  /* "Refrescar" -> solo el icono, para que quepa la fila */
   header{padding:8px 12px;gap:6px}
   .hdr-right{gap:6px}
   h1{font-size:14px}
 }
+@media(max-width:380px){.g-kpi{grid-template-columns:1fr}}
 details.p summary::-webkit-details-marker{color:var(--ac)}
 </style>
 </head>
@@ -199,7 +201,7 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
           <div class="s" id="meta" style="font-size:10px"></div>
         </div>
       </div>
-      <button class="btn-icon" id="btn-refresh" title="Comprobar cambios ahora">↻ Refrescar</button>
+      <button class="btn-icon" id="btn-refresh" title="Comprobar cambios ahora">↻<span class="lbl"> Refrescar</span></button>
       <button class="btn-icon" id="btn-lock" title="Bloquear sesión">🔒</button>
     </div>
     <div class="refresh-track"><div class="refresh-bar" id="rbar"></div></div>
@@ -270,7 +272,7 @@ function paintSeg(){
   const note = $('#period-note');
   if (note && STATE && STATE.epoch && STATE.epoch.start){
     const cut = periodCut();
-    note.textContent = (cut && cut > (periodSince() || 0))
+    note.textContent = (PERIOD !== 'epoch' && cut > (periodSince() || 0))
       ? '· acotado al inicio de la época' : '';
   }
 }
@@ -591,10 +593,9 @@ function render(){
      custodia al pie del KPI de P&L. En 390 px cuatro tarjetas empujaban todo lo demas fuera de la
      primera pantalla. */
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">EMBUDO DE CRIBADO</span><span class="mo s">${pctGate}%</span></div>
-     <div class="big" style="margin-top:6px"><span data-k="scr">0</span><span class="di" style="font-size:14px">/${g.target}</span></div>
-     <div class="bar ok-bar" style="margin:6px 0"><i id="gb" style="width:0%"></i></div>
-     <div class="s">Recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
+     <span class="s">PUERTA · LAS 6 PATAS</span><span class="pill ${(g.all_legs || 0) > 0 ? 'ok' : 'di'}">${n2(g.all_legs)} pasan</span></div>
+     <div class="big" style="margin-top:6px">${n2(g.all_legs)}<span class="di" style="font-size:13px"> / ${n2(g.screened)} cribados</span></div>
+     <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
      <span class="s">P&amp;L REALIZADO · ÉPOCA</span>
      <span class="pill ${totalRealized>=10?'ok':'bad'}" title="criterio +1% a +2%/mes sobre 1.000 EUR en papel">${totalRealized>=10?'META ✓':'META ✗'}</span></div>

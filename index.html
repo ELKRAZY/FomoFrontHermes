@@ -218,7 +218,8 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
 
   <footer>
     <div>Descifrado y dibujado en tu navegador. Ledger append-only encadenado por SHA-256; el VPS no
-    mantiene ningún proceso escuchando.</div>
+    mantiene ningún proceso escuchando. <b>Horas en tu zona</b>; el registro guarda UTC (en el tooltip
+    de cada hora).</div>
     <div id="cad" class="mo"></div>
   </footer>
 </div>
@@ -304,8 +305,19 @@ const $ = s => document.querySelector(s);
    &#39; un valor que las contenga se sale del atributo. */
 const esc = s => (s === null || s === undefined) ? '' : String(s)
   .replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const n2 = (v, d = 0) => (v === null || v === undefined || Number.isNaN(Number(v))) ? '—'
-  : Number(v).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+const n2 = (v, d = 0) => (v === null || v === undefined || Number.isNaN(Number(v))) ? '—'  : Number(v).toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* Las horas del REGISTRO son UTC. En el movil se enseñan en la zona del navegador y el UTC queda en
+   el tooltip: el 2026-10-20 el dueño leyo "10-19 11:53" como hora española y concluyo que la
+   posicion llevaba 26 h cuando llevaba 24. La confusión no era suya, era de la etiqueta. */
+const tsLocal = iso => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return String(iso).slice(5, 16).replace('T', ' ');
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}-${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const utcLabel = iso => iso ? String(iso).replace('T', ' ').replace('Z', ' UTC') : '';
 
 function b64buf(b64){
   const s = atob(b64), a = new Uint8Array(s.length);
@@ -446,7 +458,7 @@ function renderBookPositions(book, animateBox = false){
       h += `<tr title="coste ${n2(p.cost, 2)} € · ${esc(p.venue || '')}${p.val_src ? ' · ' + esc(p.val_src) : ''}">`
         +  `<td><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">${stPill}`
         +  `<b class="mo" style="font-size:11.5px">${esc(sym)}</b></div>`
-        +  `<div class="di" style="font-size:10.5px">${esc((p.opened || '').slice(5, 16).replace('T', ' '))}</div></td>`
+        +  `<div class="di" style="font-size:10.5px" title="${esc(utcLabel(p.opened))}">${esc(tsLocal(p.opened))}</div></td>`
         +  `<td class="num">${p.value === null ? '<span class="wa" title="Sin precio de salida medible">s/p</span>' : n2(p.value, 2)}</td>`
         +  `<td class="num ${pl > 0 ? 'ok' : pl < 0 ? 'bad' : 'di'}">${pl === null ? '—' : (pl > 0 ? '+' : '') + n2(pl, 2)}`
         +  (p.ret !== null && p.ret !== undefined
@@ -485,7 +497,7 @@ function renderCandidatesBox(){
   }
   let h = `<div class="s" style="margin:2px 0 6px">Mostrando <b>${filtered.length}</b> de ${base.length}`
     + `${PERIOD === 'epoch' ? '' : ' · ' + periodLabel()}`
-    + ` · el panel recibe los últimos ${all.length}, desde ${esc((oldest || '').slice(11, 16))}Z: no hay historia de días aquí</div>`;
+    + ` · el panel recibe los últimos ${all.length}, desde ${esc(tsLocal(oldest))}: no hay historia de días aquí</div>`;
   /* 5 columnas: P/F/? juntos y la decisión con su mecanismo debajo (eso sustituye a la tabla de
      decisiones, donde 34 de 40 filas eran el mismo free_kill:volume_h24). */
   h += `<div class="scroll-box tall"><table><thead><tr><th>Token</th><th class="n">Liq</th>`

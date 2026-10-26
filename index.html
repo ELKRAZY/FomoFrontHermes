@@ -267,8 +267,8 @@ let LAST_TS = null, LAST_CHECK = null, NEXT_POLL_AT = Date.now() + POLL_MS;
 /* Un filtro POR LIBRO. Antes era una sola variable global y el bucle de los dos libros la leia a la
    vez: pulsar "cerradas ganadoras" en Estrategia cambiaba tambien Control, y la comparacion A/B
    dejaba de ser una comparacion entre dos vistas distintas. */
-const PFILTER = { screened: 'all', control: 'all' };
-const PSEARCH = { screened: '', control: '' };
+const PFILTER = { screened: 'all', control: 'all', trail: 'all' };
+const PSEARCH = { screened: '', control: '', trail: '' };
 let CAND_FILTER = 'all';
 /* Periodo de las tablas. Un solo selector global (Hoy/7d/30d/Época) para no llenar el movil de
    grupos de controles: los libros conservan su fila de estado + buscador, y esto solo acota fechas.
@@ -312,8 +312,9 @@ window.setPeriod = function(k){
   PERIOD = k;
   paintSeg();
   paintModels();
-  renderBookPositions('screened', true);
-  renderBookPositions('control', true);
+  /* Solo el libro visible: la tarjeta de trail no se pintaba nunca porque esta lista estaba
+     escrita a mano con screened y control, y por eso sus filtros y su lista salian vacios. */
+  renderBookPositions(MODEL, true);
   renderCandidatesBox();
 };
 function paintSeg(){
@@ -893,15 +894,17 @@ function render(){
   h += `</tbody></table></div></details></div>`;
 
   $('#root').innerHTML = h;
-  renderBookPositions('screened', false);
-  renderBookPositions('control', false);
+  renderBookPositions(MODEL, false);
   renderCandidatesBox();
 
   anim($('[data-k="cash"]'), S.money.net, 2, ' €');
   anim($('[data-k="scr"]'), g.screened, 0);
   anim($('[data-k="col"]'), g.collected, 0);
   setTimeout(() => { const b = $('#gb'); if (b) b.style.width = pctGate + '%'; }, 50);
-  for (const book of ['screened','control']){
+  /* Los contadores de la tarjeta (capital, disponible, desplegado, fees) se rellenan aqui, y esta
+     lista estaba escrita a mano con screened y control: la tarjeta de trail salia con 0 en todo
+     aunque el libro tuviera 5,13 EUR desplegados. Se usa la lista de modelos, una sola fuente. */
+  for (const [book] of MODELS){
     const b = (S.book||{})[book];
     if (!b) continue;
     const q = k => $('[data-k="'+k+'-'+book+'"]');

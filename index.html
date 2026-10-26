@@ -1017,7 +1017,11 @@ function renderPosDrawer(p){
   return `<div class="pos-drawer">${cab}${resumen}
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
          onpointerdown="window.__posTap && window.__posTap(event, this, '${esc(p.position)}')">
-      <path d="${area}" fill="#60a5fa" fill-opacity="0.16"/>
+      <path d="${area}" fill="#60a5fa" fill-opacity="0.14"/>
+      <!-- el borde de la liquidez: sin el, un pool que no se mueve queda como un bloque azul y no
+           se ve la forma; con el, una caida del 80% se lee igual aunque el area tape el fondo -->
+      <path d="${m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq(x[2] || 0).toFixed(1)}`).join('')}"
+            fill="none" stroke="#60a5fa" stroke-width="1.1" stroke-opacity="0.9"/>
       <path d="${linea}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round"/>
       ${marks}
       <line data-role="pos-cursor" x1="0" y1="${T}" x2="0" y2="${T + PH}" stroke="#e5e7eb"

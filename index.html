@@ -696,7 +696,14 @@ function render(){
   if (!S) return;
   $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
     + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · papel, sin dinero real`;
-  $('#age').textContent = 'Datos: hace ' + ago(S.generated_at);
+  /* Aviso de dato viejo: AES-GCM garantiza que el blob lo cifro el VPS, no CUANDO. Si el CDN sirve
+     una copia antigua (o un proxy la retiene) el JSON descifra sin error y parece actual. Con el
+     sello `generated_at` dentro del texto cifrado, la pagina puede decirlo: a partir de 120 s se
+     marca en rojo. No es cosmetico: es la unica forma de detectar un replay. */
+  const EDAD = Math.max(0, (Date.now() - new Date(S.generated_at).getTime()) / 1000);
+  const ageEl = $('#age');
+  ageEl.textContent = 'Datos: hace ' + ago(S.generated_at) + (EDAD > 120 ? '  ⚠ DATO VIEJO' : '');
+  ageEl.style.color = EDAD > 120 ? 'var(--bad)' : '';
   LAST_TS = S.generated_at;
   $('#meta').textContent = S.ledger;
   // La integridad, en el badge del header: en el movil ocupaba un KPI entero y casi nunca cambia.

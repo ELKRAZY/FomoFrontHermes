@@ -617,44 +617,338 @@ function renderCandidatesBox(){
 /* P&L acumulado del libro elegido, en SVG dentro de la propia pagina (sin CDN ni libreria: la
    pagina es un solo fichero y en el movil se nota). Cada punto es un cierre real del ledger, en el
    orden en que ocurrieron; la linea de cero es la referencia y el ultimo valor va rotulado. */
-function pnlChart(book, S){
-  const b = (S.book || {})[book];
+function pnlChart(book, S) {
+  const books = S && S.book ? S.book : {};
+  const b = books[book];
   if (!b) return '';
-  const P = (b.positions || []).filter(p => p.state !== 'abierta' && p.closed)
-    .sort((a, b2) => (a.closed < b2.closed ? -1 : 1));
-  if (P.length < 2) {
-    return `<div class="p" style="margin-bottom:10px"><div class="s">P&L acumulado · ${esc(book)}</div>
-      <div class="di" style="font-size:12px;margin-top:6px">Necesita al menos 2 cierres para dibujar
-      (hay ${P.length})${(b.positions_truncated || (b.closed > P.length)) ? ' · el libro trae sólo una parte de los cierres' : ''}</div></div>`;
+
+  const num = v => (Number.isFinite(+v) ? +v : 0);
+  /* Euros, no dolares, y con el formato del panel (coma decimal). */
+  const fmtSigned = v => (Math.abs(v) < 0.005 ? '' : (v > 0 ? '+' : '\u2212')) + n2(Math.abs(v), 2) + ' \u20ac';
+  const fmtDate = ms => {
+    if (!Number.isFinite(ms)) return '—';
+    // Hora de Madrid, como el resto del panel.
+    try {
+      return new Date(ms).toLocaleString('es-ES', { timeZone: 'Europe/Madrid',
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      const d = new Date(ms), pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+  };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+
+  // Extrae serie temporal ordenada de cierres válidos + punto inicial en 0
+  const buildSeries = (bk) => {
+    if (!bk) return { raw: [], tMin: 0, tMax: 1 };
+    const pos = Array.isArray(bk.positions) ? bk.positions : [];
+    const closed = [];
+    let earliestOpen = Infinity;
+
+    for (let i = 0; i < pos.length; i++) {
+      const p = pos[i];
+      if (!p) continue;
+      const to = Date.parse(p.opened || '');
+      if (Number.isFinite(to) && to < earliestOpen) earliestOpen = to;
+      if (p.state === 'abierta' || !p.closed) continue;
+      const tc = Date.parse(p.closed);
+      if (!Number.isFinite(tc)) continue;
+      closed.push({
+        t: tc,
+        pnl: num(p.pnl),
+        sym: p.symbol || p.position || '?',
+        why: String(p.why || 'cierre'),
+        cost: num(p.cost)
+      });
+    }
+    closed.sort((a, z) => a.t - z.t);
+
+    const epochStart = Date.parse((S.epoch && (S.epoch.started || S.epoch.start || S.epoch.opened)) || '');
+    const lastClosedT = closed.length ? closed[closed.length - 1].t : NaN;
+    const engineNow = Date.parse((S.engine && (S.engine.updated || S.engine.ts || S.engine.last_cycle)) || '');
+    const tNow = Math.max(
+      Number.isFinite(engineNow) ? engineNow : 0,
+      Number.isFinite(lastClosedT) ? lastClosedT : 0,
+      Date.now()
+    );
+    let t0 = Number.isFinite(epochStart) ? epochStart
+           : Number.isFinite(earliestOpen) ? earliestOpen
+           : Number.isFinite(lastClosedT) ? lastClosedT - 3600e3
+           : tNow - 3600e3;
+    if (closed.length && closed[0].t < t0) t0 = closed[0].t - 60e3;
+    if (tNow <= t0) t0 = tNow - 3600e3;
+
+    let acc = 0, peak = 0;
+    const pts = [{ t: t0, v: 0, peak: 0, dd: 0, pnl: 0, sym: 'Inicio', why: 'apertura de época', isStart: true }];
+    for (let i = 0; i < closed.length; i++) {
+      const c = closed[i];
+      acc += c.pnl;
+      if (acc > peak) peak = acc;
+      pts.push({
+        t: c.t,
+        v: acc,
+        peak,
+        dd: acc - peak, // <= 0
+        pnl: c.pnl,
+        sym: c.sym,
+        why: c.why,
+        idx: i + 1
+      });
+    }
+    return { raw: pts, count: closed.length, tMin: t0, tMax: tNow };
+  };
+
+  // Compresión por columna de píxeles (conserva primero, min, max y último de cada pixel X)
+  const decimateByPixel = (pts, xFn, maxBuckets) => {
+    if (pts.length <= maxBuckets) return pts;
+    const out = [];
+    let curBucket = -1;
+    let first = null, minP = null, maxP = null, last = null;
+    const flush = () => {
+      if (!first) return;
+      out.push(first);
+      if (minP && maxP && minP !== first && maxP !== first) {
+        if (minP.t <= maxP.t) {
+          if (minP !== first) out.push(minP);
+          if (maxP !== minP && maxP !== first) out.push(maxP);
+        } else {
+          if (maxP !== first) out.push(maxP);
+          if (minP !== maxP && minP !== first) out.push(minP);
+        }
+      } else if (minP && minP !== first) {
+        out.push(minP);
+      } else if (maxP && maxP !== first) {
+        out.push(maxP);
+      }
+      if (last && last !== out[out.length - 1]) out.push(last);
+    };
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const bkt = Math.floor(xFn(p.t));
+      if (bkt !== curBucket) {
+        flush();
+        curBucket = bkt;
+        first = minP = maxP = last = p;
+      } else {
+        last = p;
+        if (p.v < minP.v) minP = p;
+        if (p.v > maxP.v) maxP = p;
+      }
+    }
+    flush();
+    return out;
+  };
+
+  const main = buildSeries(b);
+  // Libro espejo para comparación directa (trail <-> control)
+  const peerKey = book === 'trail' ? 'control' : (book === 'control' ? 'trail' : null);
+  const peer = (peerKey && books[peerKey]) ? buildSeries(books[peerKey]) : null;
+
+  const tMin = peer ? Math.min(main.tMin, peer.tMin) : main.tMin;
+  const tMax = Math.max(main.tMax, peer ? peer.tMax : 0, tMin + 60e3);
+
+  // Dimensiones SVG pensadas para 390px (358px útiles dentro de tarjeta)
+  const W = 358, H = 172;
+  const L = 44, R = 14, T = 14, B = 24;
+  const PW = W - L - R, PH = H - T - B;
+
+  // Extremos Y incluyendo realizado, pico, libro par y horquilla de abiertas/unvalued
+  const realizedNow = main.raw[main.raw.length - 1].v;
+  const markBest = realizedNow + num(b.unrealized);
+  const markWorst = Number.isFinite(+b.realized_if_unvalued_are_zero)
+    ? +b.realized_if_unvalued_are_zero + num(b.unrealized)
+    : realizedNow + num(b.unrealized) - num(b.unvalued_cost);
+
+  let lo = Math.min(0, realizedNow, markBest, markWorst);
+  let hi = Math.max(0, realizedNow, markBest, markWorst);
+  let maxDD = 0;
+
+  for (let i = 0; i < main.raw.length; i++) {
+    const p = main.raw[i];
+    if (p.v < lo) lo = p.v;
+    if (p.v > hi) hi = p.v;
+    if (p.dd < maxDD) maxDD = p.dd;
   }
-  const W = 320, H = 110, PAD = 6;
-  let acc = 0;
-  const pts = P.map((p, i) => { acc += (p.pnl || 0); return { i, v: acc, d: p.closed }; });
-  const vs = pts.map(x => x.v).concat([0]);
-  const lo = Math.min(...vs), hi = Math.max(...vs);
-  const span = (hi - lo) || 1;
-  const X = i => PAD + (W - 2 * PAD) * (i / (pts.length - 1));
-  const Y = v => PAD + (H - 2 * PAD) * (1 - (v - lo) / span);
-  const line = pts.map(x => `${X(x.i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(' ');
-  const last = pts[pts.length - 1];
-  const up = last.v >= 0;
-  const col = up ? 'var(--ok)' : 'var(--bad)';
-  return `<div class="p" style="margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:baseline">
-      <span class="s">P&L acumulado · ${esc(book === 'screened' ? '6 patas' : book)}</span>
-      <span class="pill ${up ? 'ok' : 'bad'}">${last.v > 0 ? '+' : ''}${n2(last.v, 2)} €</span></div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"
-         style="margin-top:6px;display:block">
-      <line x1="${PAD}" y1="${Y(0).toFixed(1)}" x2="${W - PAD}" y2="${Y(0).toFixed(1)}"
-            stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3"/>
-      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2"
-                stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-      <circle cx="${X(last.i).toFixed(1)}" cy="${Y(last.v).toFixed(1)}" r="2.5" fill="${col}"/>
+  if (peer) {
+    for (let i = 0; i < peer.raw.length; i++) {
+      const v = peer.raw[i].v;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+  }
+  const padY = (hi - lo) * 0.08 || 1;
+  lo -= padY;
+  hi += padY;
+  const spanY = (hi - lo) || 1;
+
+  const X = t => L + PW * Math.max(0, Math.min(1, (t - tMin) / (tMax - tMin)));
+  const Y = v => T + PH * (1 - (v - lo) / spanY);
+  const f1 = n => n.toFixed(1);
+
+  const pts = decimateByPixel(main.raw, X, Math.floor(PW));
+
+  // Construye path escalonado (step-after) y área de drawdown en 1 sola pasada
+  let stepD = '';
+  let ddD = '';
+  let liqTicksD = '';
+  let timeTicksD = '';
+
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const x = f1(X(p.t)), y = f1(Y(p.v)), yPeak = f1(Y(p.peak));
+    if (i === 0) {
+      stepD += `M${x},${y}`;
+      ddD += `M${x},${yPeak}L${x},${y}`;
+    } else {
+      const prevY = f1(Y(pts[i - 1].v));
+      const prevPeakY = f1(Y(pts[i - 1].peak));
+      stepD += `H${x}V${y}`;
+      ddD += `H${x}V${y}`;
+      // Cierra el polígono superior del pico después
+      void prevY; void prevPeakY;
+    }
+    if (!p.isStart) {
+      const w = p.why.toLowerCase();
+      if (w.includes('liquidez') || w.includes('rug') || w.includes('zero') || p.pnl <= -0.95 * (p.cost || 1)) {
+        liqTicksD += `M${x},${f1( +y - 3.5 )}V${f1( +y + 3.5 )}`;
+      } else if (w.includes('time')) {
+        timeTicksD += `M${x},${f1( +y - 2 )}V${f1( +y + 2 )}`;
+      }
+    }
+  }
+  // Extiende hasta tMax (ahora)
+  const xNow = f1(X(tMax)), yNow = f1(Y(realizedNow)), yPeakNow = f1(Y(pts[pts.length - 1].peak));
+  stepD += `H${xNow}`;
+  ddD += `H${xNow}V${yPeakNow}`;
+  // Regresa por la envolvente del pico (high-water mark) de derecha a izquierda para cerrar el área de drawdown
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const x = f1(X(pts[i].t));
+    const yPeak = f1(Y(pts[i].peak));
+    ddD += `H${x}V${yPeak}`;
+  }
+  ddD += 'Z';
+
+  // Path del libro espejo (si aplica)
+  let peerD = '';
+  if (peer && peer.raw.length) {
+    const pPts = decimateByPixel(peer.raw, X, Math.floor(PW));
+    for (let i = 0; i < pPts.length; i++) {
+      const x = f1(X(pPts[i].t)), y = f1(Y(pPts[i].v));
+      peerD += (i === 0) ? `M${x},${y}` : `H${x}V${y}`;
+    }
+    peerD += `H${xNow}`;
+  }
+
+  const yZero = f1(Y(0));
+  const yHi = f1(Y(hi - padY)), yLo = f1(Y(lo + padY));
+  const strokeMain = realizedNow >= 0 ? '#22c55e' : '#ef4444';
+  const unvalN = num(b.unvalued_open);
+  const unvalCost = num(b.unvalued_cost);
+  const hasFork = (num(b.open) > 0) || unvalN > 0;
+  const yBest = f1(Y(markBest)), yWorst = f1(Y(markWorst));
+  const xFork = f1(Math.min(W - 4, +xNow + 6));
+
+  // Registro ligero en window para inspección táctil sin recrear listeners por nodo
+  if (typeof window !== 'undefined') {
+    window.__pnlCharts = window.__pnlCharts || {};
+    window.__pnlCharts[book] = { pts, tMin, tMax, L, PW, W };
+    if (!window.__pnlTapSelect) {
+      window.__pnlTapSelect = function (ev, el, bk) {
+        const st = window.__pnlCharts && window.__pnlCharts[bk];
+        if (!st || !st.pts.length) return;
+        const rect = el.getBoundingClientRect();
+        const clientX = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
+        const svgX = ((clientX - rect.left) / (rect.width || 1)) * st.W;
+        const ratio = Math.max(0, Math.min(1, (svgX - st.L) / st.PW));
+        const targetT = st.tMin + ratio * (st.tMax - st.tMin);
+        // Búsqueda binaria del cierre anterior o más cercano al toque
+        let loIdx = 0, hiIdx = st.pts.length - 1;
+        while (loIdx < hiIdx) {
+          const mid = (loIdx + hiIdx + 1) >> 1;
+          if (st.pts[mid].t <= targetT) loIdx = mid;
+          else hiIdx = mid - 1;
+        }
+        if (loIdx === 0 && st.pts.length > 1) loIdx = 1;
+        const p = st.pts[loIdx];
+        const cur = el.querySelector('[data-role="cursor"]');
+        const dot = el.querySelector('[data-role="dot"]');
+        const info = el.parentElement.querySelector('[data-role="readout"]');
+        const cx = (st.L + st.PW * ((p.t - st.tMin) / (st.tMax - st.tMin))).toFixed(1);
+        if (cur) { cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.style.opacity = '1'; }
+        if (dot) { dot.setAttribute('cx', cx); dot.style.opacity = '1'; }
+        if (info) {
+          const dStr = fmtDate(p.t);
+          info.textContent = p.isStart
+            ? `Inicio (${dStr}) · Acum: 0,00 €`
+            : `#${p.idx || loIdx} ${p.sym} · ${fmtSigned(p.pnl)} (${p.why}) · ${dStr} · Acum: ${fmtSigned(p.v)} (DD ${fmtSigned(p.dd)})`;
+        }
+      };
+    }
+  }
+
+  const lastClosure = main.count
+    ? main.raw[main.raw.length - 1]
+    : null;
+  const defaultReadout = lastClosure
+    ? `Último #${main.count} ${esc(lastClosure.sym)}: ${fmtSigned(lastClosure.pnl)} (${esc(lastClosure.why)}) · Max DD ${fmtSigned(maxDD)}`
+    : `0 cierres aún · Línea plana desde inicio de época (${ num(b.open) } abiertas)`;
+
+  return `<div class="p" style="padding:8px 10px">
+    <div data-role="readout" style="font:11px/1.35 ui-monospace,monospace;color:#9ca3af;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      ${defaultReadout}
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none"
+         onpointerdown="window.__pnlTapSelect && window.__pnlTapSelect(event, this, '${esc(book)}')">
+      <!-- Área de Drawdown desde el High-Water Mark -->
+      <path d="${ddD}" fill="#ef4444" fill-opacity="0.13"/>
+
+      <!-- Rejilla horizontal (techo, cero, suelo) -->
+      <line x1="${L}" y1="${yHi}" x2="${W - R}" y2="${yHi}" stroke="#ffffff" stroke-opacity="0.07" stroke-dasharray="2,3"/>
+      <line x1="${L}" y1="${yZero}" x2="${W - R}" y2="${yZero}" stroke="#9ca3af" stroke-opacity="0.35" stroke-dasharray="3,3"/>
+      <line x1="${L}" y1="${yLo}" x2="${W - R}" y2="${yLo}" stroke="#ffffff" stroke-opacity="0.07" stroke-dasharray="2,3"/>
+
+      <!-- Libro espejo (control vs trail) -->
+      ${peerD ? `<path d="${peerD}" fill="none" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="3,2" stroke-opacity="0.7"/>` : ''}
+
+      <!-- P&L Realizado escalonado -->
+      <path d="${stepD}" fill="none" stroke="${strokeMain}" stroke-width="1.75" stroke-linejoin="round"/>
+
+      <!-- Ticks de motivo de salida (naranja = time stop, magenta = liquidez/write-off) -->
+      ${timeTicksD ? `<path d="${timeTicksD}" stroke="#f59e0b" stroke-width="1.3" stroke-opacity="0.85"/>` : ''}
+      ${liqTicksD ? `<path d="${liqTicksD}" stroke="#f43f5e" stroke-width="2"/>` : ''}
+
+      <!-- Horquilla de abiertas / sin valoración al final de la curva -->
+      ${hasFork ? `
+        <line x1="${xNow}" y1="${yNow}" x2="${xFork}" y2="${yBest}" stroke="#a855f7" stroke-width="1.2" stroke-dasharray="2,2"/>
+        <line x1="${xNow}" y1="${yNow}" x2="${xFork}" y2="${yWorst}" stroke="#f43f5e" stroke-width="1.2" stroke-dasharray="2,2"/>
+        <line x1="${xFork}" y1="${yBest}" x2="${xFork}" y2="${yWorst}" stroke="#f43f5e" stroke-width="2.5" stroke-opacity="0.65"/>
+      ` : ''}
+
+      <!-- Punto actual -->
+      <circle cx="${xNow}" cy="${yNow}" r="3" fill="${strokeMain}"/>
+
+      <!-- Cursor de inspección táctil (1 sola línea para todo el gráfico) -->
+      <line data-role="cursor" x1="0" y1="${T}" x2="0" y2="${H - B}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="2,2" style="opacity:0;pointer-events:none"/>
+
+      <!-- Etiquetas Y -->
+      <text x="${L - 4}" y="${+yHi + 3}" text-anchor="end" fill="#9ca3af" font-size="9.5" font-family="ui-monospace,monospace">${fmtSigned(hi - padY)}</text>
+      <text x="${L - 4}" y="${+yZero + 3}" text-anchor="end" fill="#d1d5db" font-size="9.5" font-family="ui-monospace,monospace">0 €</text>
+      <text x="${L - 4}" y="${+yLo + 3}" text-anchor="end" fill="#9ca3af" font-size="9.5" font-family="ui-monospace,monospace">${fmtSigned(lo + padY)}</text>
+
+      <!-- Etiquetas X (inicio, mitad, ahora) -->
+      <text x="${L}" y="${H - 6}" text-anchor="start" fill="#9ca3af" font-size="9.5" font-family="ui-monospace,monospace">${fmtDate(tMin)}</text>
+      <text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle" fill="#6b7280" font-size="9" font-family="ui-monospace,monospace">${main.count} cierres</text>
+      <text x="${W - R}" y="${H - 6}" text-anchor="end" fill="#9ca3af" font-size="9.5" font-family="ui-monospace,monospace">${fmtDate(tMax)}</text>
     </svg>
-    <div class="s" style="display:flex;justify-content:space-between;font-size:10px">
-      <span>${esc((P[0].closed || '').slice(0, 10))}</span>
-      <span class="di">${P.length} cierres · máximo ${n2(hi, 2)} · mínimo ${n2(lo, 2)}</span>
-      <span>${esc((P[P.length - 1].closed || '').slice(0, 10))}</span></div></div>`;
+    <div style="display:flex;justify-content:space-between;gap:6px;margin-top:4px;font:10px ui-monospace,monospace;color:#9ca3af;flex-wrap:wrap">
+      <span><b style="color:${strokeMain}">━</b> Realizado ${fmtSigned(realizedNow)}</span>
+      <span><b style="color:#ef4444">▒</b> DD máx ${fmtSigned(maxDD)}</span>
+      ${peerKey && peer ? `<span><b style="color:#60a5fa">┅</b> vs ${esc(peerKey)} (${peer.count})</span>` : ''}
+      ${unvalN > 0 ? `<span style="color:#f43f5e">┣ ${unvalN} sin precio (−${n2(unvalCost, 2)} €)</span>` : ''}
+    </div>
+  </div>`;
 }
 
 function bookCard(book, S){
@@ -778,8 +1072,10 @@ function render(){
         <b>${n2(totalRealized-totalUnval,2)} €</b></div>` : ''}</div>`;
   h += '</div>';
 
-  h += `<h2><span>Comparativa A/B · libros independientes</span>
-     <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
+  /* Un solo libro en pantalla (el del selector), asi que el rotulo ya no puede decir "comparativa
+     A/B": lo que hay debajo es el libro elegido y, en `trail`, su comparacion contra control. */
+  h += `<h2><span>Libro seleccionado · ${MODEL === 'trail' ? 'trailing' : MODEL}</span>
+     <span class="s">P&L acumulado y posiciones de este libro</span></h2><div class="g-books">`;
   /* Un solo libro en pantalla: el elegido en el selector. Antes se apilaban los tres y en el
      movil habia que bajar media pagina para ver el segundo. */
   h += pnlChart(MODEL, S) + bookCard(MODEL, S);

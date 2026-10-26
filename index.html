@@ -178,7 +178,7 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
     no sale de tu navegador: sirve para descifrar aquí lo que el VPS cifró.</div>
     <input id="pw" type="password" placeholder="Contraseña de descifrado" autocomplete="current-password">
     <label class="rem-row">
-      <input type="checkbox" id="rem-local"> Recordar en este navegador (localStorage)
+      <input type="checkbox" id="rem-local"> Recordar en esta pestaña (se borra al cerrar)
     </label>
     <button id="go">Descifrar y abrir terminal</button>
     <div class="err" id="err"></div>
@@ -913,15 +913,21 @@ function remIntent(){
   try { return localStorage.getItem(REM_KEY) === '1'; } catch (e){ return false; }
 }
 function rememberedPass(){
-  try { return remIntent() ? (localStorage.getItem('fomo_pw') || '') : ''; } catch (e){ return ''; }
+  /* La contrasena vive en sessionStorage, NO en localStorage: sobrevive a recargas mientras la
+     pestaña este abierta y desaparece al cerrar el navegador. Antes se guardaba en localStorage en
+     texto plano y cualquiera con el movil desbloqueado, o una extension, la leia sin descifrar
+     nada. El cifrado del blob ya es fuerte (44 caracteres = ~90 bits); el eslabon debil era esto. */
+  try { return remIntent() ? (sessionStorage.getItem('fomo_pw') || '') : ''; } catch (e){ return ''; }
 }
 function setRemember(on, pass){
   try {
     localStorage.setItem(REM_KEY, on ? '1' : '0');
-    if (on && pass) localStorage.setItem('fomo_pw', pass);
-    else localStorage.removeItem('fomo_pw');
+    localStorage.removeItem('fomo_pw');            /* limpieza de versiones anteriores */
+    if (on && pass) sessionStorage.setItem('fomo_pw', pass);
+    else sessionStorage.removeItem('fomo_pw');
   } catch (e){}
 }
+try { localStorage.removeItem('fomo_pw'); } catch (e) {}   /* migracion: fuera de disco */
 let PENDING_REM = null;                 /* intención del usuario, se aplica al descifrar bien */
 function savedPass(){
   const typed = $('#pw').value;

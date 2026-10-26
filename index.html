@@ -1012,7 +1012,7 @@ function renderPosDrawer(p){
   window.__posQuote = window.__posQuote || {}; window.__posQuote[p.position] = p.quote || 'BNB';
   const ult = m[m.length - 1];
   const resumen = `<div data-role="pos-readout" style="font:10.5px ui-monospace,monospace;color:#9ca3af;margin:4px 0 3px">
-    ${m.length} marcas · valor ${n2(ult[1] / 100, 2)} € · pool ${n2(ult[2] / 100, 2)} ${esc(p.quote || 'BNB')} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
+    ${m.length} marcas · precio ${ult[3] === null ? '—' : n2(ult[3] / 100, 2) + ' €/M'} · valor ${n2(ult[1] / 100, 2)} € · pool ${n2(ult[2] / 100, 2)} ${esc(p.quote || 'BNB')} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
     · <span style="color:#a855f7">coste ${n2(p.cost, 2)} €</span></div>`;
   return `<div class="pos-drawer">${cab}${resumen}
     <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
@@ -1049,7 +1049,8 @@ if (!window.__posTap){
     const px = (st.L + st.PW * (best[0] / st.tMax)).toFixed(1);
     if (cur){ cur.setAttribute('x1', px); cur.setAttribute('x2', px); cur.style.opacity = '1'; }
     const out = el.parentElement.querySelector('[data-role="pos-readout"]');
-    if (out) out.innerHTML = `+${best[0]}m · valor ${n2(best[1] / 100, 2)} € · pool ${n2(best[2] / 100, 2)} ${esc((window.__posQuote || {})[pid] || '')}`;
+    if (out) out.innerHTML = `+${best[0]}m · precio ${best[3] === null ? '—' : n2(best[3] / 100, 2) + ' €/M'}`
+      + ` · valor ${n2(best[1] / 100, 2)} € · pool ${n2(best[2] / 100, 2)} ${esc((window.__posQuote || {})[pid] || '')}`;
   };
 }
 

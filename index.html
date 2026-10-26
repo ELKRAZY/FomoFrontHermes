@@ -856,7 +856,12 @@ async function load(force = false){
   if (!pass){ $('#gate').style.display = 'flex'; return; }
   try {
     $('#err').textContent = 'Descargando y descifrando el bloque…';
-    const env = await fetchBlob(force);
+    /* raw.githubusercontent.com sirve el blob con cache-control: max-age=300, asi que un sondeo
+       normal puede traer la copia de hace 5 minutos aunque el fichero ya sea nuevo. Se rompe la
+       cache con ?t= mientras la pestaña esta VISIBLE (que es cuando el dueño mira), y se deja el
+       camino barato con ETag cuando esta oculta para no gastar datos del movil. */
+    const vis = document.visibilityState === 'visible';
+    const env = await fetchBlob(force || vis);
     if (env === null){ LAST_CHECK = new Date(); return; }
     STATE = await deriveAndDecrypt(pass, env);
     sessionStorage.setItem('fomo_pw', pass);
@@ -911,6 +916,9 @@ $('#btn-lock').addEventListener('click', () => {
 $('#rem-local').checked = remIntent();
 load();
 setInterval(() => load(false), POLL_MS);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') load(true);
+});
 </script>
 </body>
 </html>

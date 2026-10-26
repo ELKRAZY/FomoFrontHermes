@@ -210,6 +210,7 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
   <div id="engine" class="eng"></div>
   <div id="period-bar" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px">
     <span class="s">Periodo de las tablas <span class="di" id="period-note"></span></span>
+    <span class="seg" id="seg-model"></span>
     <span class="seg" id="seg-period"></span>
   </div>
 
@@ -251,6 +252,23 @@ let CAND_FILTER = 'all';
    grupos de controles: los libros conservan su fila de estado + buscador, y esto solo acota fechas.
    NUNCA cruza la frontera de epoca: effective = max(inicio de epoca, ahora - ventana). Mezclar la
    epoca 1 (con los defectos de antes del 16-oct) con la 2 rompe la contabilidad. */
+/* Modelo de prueba seleccionado. En el movil se ve UNO a la vez en lugar de las tres tarjetas
+   seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
+   elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
+let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
+const MODELS = [['screened', '6 patas'], ['control', 'control'], ['trail', 'trailing']];
+window.setModel = function(k){
+  MODEL = k;
+  try { localStorage.setItem('fomo_model', k); } catch(e){}
+  paintModels();
+  render();
+};
+function paintModels(){
+  const sm = $('#seg-model');
+  if (sm) sm.innerHTML = MODELS.map(([k, l]) =>
+    `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${l}</button>`).join('');
+}
+
 let PERIOD = 'epoch';
 const PERIODS = [['24h', 'Hoy'], ['7d', '7 d'], ['30d', '30 d'], ['epoch', 'Época']];
 function periodSince(){
@@ -271,6 +289,7 @@ function periodLabel(){
 window.setPeriod = function(k){
   PERIOD = k;
   paintSeg();
+  paintModels();
   renderBookPositions('screened', true);
   renderBookPositions('control', true);
   renderCandidatesBox();
@@ -571,6 +590,49 @@ function renderCandidatesBox(){
   box.innerHTML = h;
 }
 
+/* P&L acumulado del libro elegido, en SVG dentro de la propia pagina (sin CDN ni libreria: la
+   pagina es un solo fichero y en el movil se nota). Cada punto es un cierre real del ledger, en el
+   orden en que ocurrieron; la linea de cero es la referencia y el ultimo valor va rotulado. */
+function pnlChart(book, S){
+  const b = (S.book || {})[book];
+  if (!b) return '';
+  const P = (b.positions || []).filter(p => p.state !== 'abierta' && p.closed)
+    .sort((a, b2) => (a.closed < b2.closed ? -1 : 1));
+  if (P.length < 2) {
+    return `<div class="p" style="margin-bottom:10px"><div class="s">P&L acumulado · ${esc(book)}</div>
+      <div class="di" style="font-size:12px;margin-top:6px">Necesita al menos 2 cierres para dibujar
+      (hay ${P.length})${(b.positions_truncated || (b.closed > P.length)) ? ' · el libro trae sólo una parte de los cierres' : ''}</div></div>`;
+  }
+  const W = 320, H = 110, PAD = 6;
+  let acc = 0;
+  const pts = P.map((p, i) => { acc += (p.pnl || 0); return { i, v: acc, d: p.closed }; });
+  const vs = pts.map(x => x.v).concat([0]);
+  const lo = Math.min(...vs), hi = Math.max(...vs);
+  const span = (hi - lo) || 1;
+  const X = i => PAD + (W - 2 * PAD) * (i / (pts.length - 1));
+  const Y = v => PAD + (H - 2 * PAD) * (1 - (v - lo) / span);
+  const line = pts.map(x => `${X(x.i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  const up = last.v >= 0;
+  const col = up ? 'var(--ok)' : 'var(--bad)';
+  return `<div class="p" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span class="s">P&L acumulado · ${esc(book === 'screened' ? '6 patas' : book)}</span>
+      <span class="pill ${up ? 'ok' : 'bad'}">${last.v > 0 ? '+' : ''}${n2(last.v, 2)} €</span></div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"
+         style="margin-top:6px;display:block">
+      <line x1="${PAD}" y1="${Y(0).toFixed(1)}" x2="${W - PAD}" y2="${Y(0).toFixed(1)}"
+            stroke="#4b5563" stroke-width="1" stroke-dasharray="3 3"/>
+      <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2"
+                stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+      <circle cx="${X(last.i).toFixed(1)}" cy="${Y(last.v).toFixed(1)}" r="2.5" fill="${col}"/>
+    </svg>
+    <div class="s" style="display:flex;justify-content:space-between;font-size:10px">
+      <span>${esc((P[0].closed || '').slice(0, 10))}</span>
+      <span class="di">${P.length} cierres · máximo ${n2(hi, 2)} · mínimo ${n2(lo, 2)}</span>
+      <span>${esc((P[P.length - 1].closed || '').slice(0, 10))}</span></div></div>`;
+}
+
 function bookCard(book, S){
   const b = (S.book || {})[book];
   if (!b) return '';
@@ -685,7 +747,9 @@ function render(){
 
   h += `<h2><span>Comparativa A/B · libros independientes</span>
      <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
-  h += bookCard('screened', S) + bookCard('control', S) + bookCard('trail', S);
+  /* Un solo libro en pantalla: el elegido en el selector. Antes se apilaban los tres y en el
+     movil habia que bajar media pagina para ver el segundo. */
+  h += pnlChart(MODEL, S) + bookCard(MODEL, S);
   h += '</div>';
 
   h += `<h2><span>Épocas cerradas</span><span class="s">${(S.epochs || []).length} en el registro</span></h2>`;

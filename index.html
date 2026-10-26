@@ -740,6 +740,8 @@ function render(){
   }
   renderEngine(S);
   paintSeg();
+  paintModels();          /* el selector de modelo se pinta con el render; antes solo se pintaba
+                             al cambiar el periodo, asi que al abrir la pagina salia vacio */
   const w = $('#warn');
   if (!S.integrity.ok){
     w.style.display = 'block';

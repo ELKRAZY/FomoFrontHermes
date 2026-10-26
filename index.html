@@ -564,7 +564,7 @@ function renderCandidatesBox(){
 function bookCard(book, S){
   const b = (S.book || {})[book];
   if (!b) return '';
-  const isScr = book === 'screened';
+  const isScr = book === 'screened', isTrail = book === 'trail';
   const P = b.positions || [];
   let nWin = 0, nLoss = 0, nOpen = 0;
   for (const p of P){ const k = PF_BUCKET(p); if (k==='win') nWin++; else if (k==='loss') nLoss++; else nOpen++; }
@@ -573,9 +573,12 @@ function bookCard(book, S){
   const openAll = P.filter(p => p.state === 'abierta').length;
   let h = `<div class="p book-card ${isScr?'':'control-card'}">`
     + `<div class="book-hdr"><div>`
-    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · 6 patas' : '🧪 CONTROL · cortes gratis'}</div>`
+    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · 6 patas'
+        : isTrail ? '🪂 TRAILING · deja correr' : '🧪 CONTROL · cortes gratis'}</div>`
     + `<div class="book-sub">${isScr
         ? 'exige mint, freeze, concentración, honeypot, nonce ≤ 5 y LP bloqueado'
+        : isTrail
+        ? 'misma compra que control; pasadas 24 h solo cierra si el pool pierde la mitad de su pico'
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
     + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
     + `<div class="book-metrics">`
@@ -627,6 +630,14 @@ function render(){
   }
   renderEngine(S);
   paintSeg();
+  if (isTrail){
+    /* La comparacion que justifica el libro: mismo dinero, misma compra, distinta salida. */
+    const ctl = (S.book || {}).control || {};
+    const d = (b.realized || 0) - (ctl.realized || 0);
+    h += `<div class="s" style="margin-top:8px">Contra control, misma compra:
+      <b class="${d>0?'ok':d<0?'bad':'di'}">${d>0?'+':''}${n2(d,2)} €</b>
+      <span class="di">· realizado ${n2(b.realized,2)} vs ${n2(ctl.realized,2)} €</span></div>`;
+  }
   const w = $('#warn');
   if (!S.integrity.ok){
     w.style.display = 'block';
@@ -636,6 +647,8 @@ function render(){
   const g = S.gate || { screened:0, target:100, collected:0, real_attempts:0 };
   const pctGate = Math.min(100, Math.round(100 * g.screened / (g.target || 100)));
   const BK = S.book || {};
+  // El trail NO entra en el total: es un espejo de control (misma compra, otra regla de salida),
+  // asi que sumarlo contaria dos veces la misma operacion. Se compara por separado.
   const scr = BK.screened || { realized:0 }, ctl = BK.control || { realized:0 };
   const totalRealized = (scr.realized || 0) + (ctl.realized || 0);
   const totalUnval = ((BK.screened && BK.screened.unvalued_cost) || 0)
@@ -662,7 +675,7 @@ function render(){
 
   h += `<h2><span>Comparativa A/B · libros independientes</span>
      <span class="s">filtros, búsqueda y scroll aislados por caja</span></h2><div class="g-books">`;
-  h += bookCard('screened', S) + bookCard('control', S);
+  h += bookCard('screened', S) + bookCard('control', S) + bookCard('trail', S);
   h += '</div>';
 
   h += `<h2><span>Épocas cerradas</span><span class="s">${(S.epochs || []).length} en el registro</span></h2>`;

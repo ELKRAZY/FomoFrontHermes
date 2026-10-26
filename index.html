@@ -604,6 +604,14 @@ function bookCard(book, S){
   h += `<div class="wedge" style="border-color:#3d3360;background:rgba(99,102,241,.10);color:#cfd2ff"
      title="El mark sale de la fórmula de venta del pool (producto constante con el impacto de nuestra orden), no del spot. Cobertura ${marked} de ${openAll} abiertas. Es una marca, no dinero: el criterio se juzga sobre el realizado.">
      Mark de abiertas: <b>${marked}/${openAll}</b> valoradas por la fórmula del pool · <b>marca, no dinero</b></div>`;
+  if (isTrail){
+    /* La comparacion que justifica el libro: mismo dinero, misma compra, distinta salida. */
+    const ctlB = (S.book || {}).control || {};
+    const dB = (b.realized || 0) - (ctlB.realized || 0);
+    h += `<div class="wedge" style="border-color:#3d3360;background:rgba(99,102,241,.10);color:#cfd2ff">
+      Contra <b>control</b>, misma compra: <b class="${dB>0?'ok':dB<0?'bad':'di'}">${dB>0?'+':''}${n2(dB,2)} €</b>
+      · realizado ${n2(b.realized,2)} vs ${n2(ctlB.realized,2)} €</div>`;
+  }
   h += `<div class="fb-row"><div class="fb" id="fb-${book}"></div>
     <input class="search-in" type="search" placeholder="Filtrar token/motivo…"
       value="${esc(PSEARCH[book])}" oninput="setBookSearch('${book}', this.value)"></div>
@@ -630,14 +638,6 @@ function render(){
   }
   renderEngine(S);
   paintSeg();
-  if (isTrail){
-    /* La comparacion que justifica el libro: mismo dinero, misma compra, distinta salida. */
-    const ctl = (S.book || {}).control || {};
-    const d = (b.realized || 0) - (ctl.realized || 0);
-    h += `<div class="s" style="margin-top:8px">Contra control, misma compra:
-      <b class="${d>0?'ok':d<0?'bad':'di'}">${d>0?'+':''}${n2(d,2)} €</b>
-      <span class="di">· realizado ${n2(b.realized,2)} vs ${n2(ctl.realized,2)} €</span></div>`;
-  }
   const w = $('#warn');
   if (!S.integrity.ok){
     w.style.display = 'block';

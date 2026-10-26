@@ -1134,7 +1134,11 @@ function render(){
     const nr = (S.integrity.tables || []).reduce((a, t) => a + (t.rows || 0), 0);
     sb.textContent = S.integrity.ok ? 'SHA-256 ✓' : 'SHA-256 ✗';
     sb.className = 'badge-mode' + (S.integrity.ok ? '' : ' bad');
-    sb.title = `${nt} tablas encadenadas · ${nr.toLocaleString('es-ES')} filas append-only`;
+    sb.title = `${nt} tablas encadenadas · ${nr.toLocaleString('es-ES')} filas append-only`
+      + (S.integrity.hashed_now === undefined ? ''
+         : ` · ${S.integrity.hashed_now.toLocaleString('es-ES')} hasheadas en esta pasada`
+           + ` y ${(S.integrity.rows_known || 0).toLocaleString('es-ES')} ya verificadas antes`
+           + ` (la cadena se comprueba entera de forma rotatoria cada hora, y completa en la copia diaria)`);
   }
   renderEngine(S);
   paintSeg();

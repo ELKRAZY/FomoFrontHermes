@@ -228,6 +228,15 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
 const BLOB = "https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc";
 const ITER_FALLBACK = 600000;
 const POLL_MS = 60000;
+/* Dos CDNs, no uno. Medido el 2026-10-26: raw.githubusercontent.com ignora la query (?t=) al
+   cachear y sirve el blob con cache-control max-age=300 — hasta 5 minutos de retraso aunque el
+   fichero ya sea nuevo. jsDelivr se purga con el push y servia el blob al dia (age 0) mientras
+   raw daba uno de 154 s. Se pide a jsDelivr primero y raw queda de respaldo: si los dos fallan,
+   la pagina lo dice en vez de fingir que esta al dia. */
+const BLOBS = [
+  'https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc',
+  'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc'
+];
 
 let STATE = null, LAST_SEEN = {}, FIRST = true;
 let LAST_TS = null, LAST_CHECK = null, NEXT_POLL_AT = Date.now() + POLL_MS;
@@ -375,10 +384,11 @@ async function deriveAndDecrypt(pass, env){
 }
 
 let ETAG = null;
-async function fetchBlob(force = false){
+async function fetchBlob(force = false, which = 0){
   const headers = {};
   if (ETAG && !force) headers['If-None-Match'] = ETAG;
-  const r = await fetch(BLOB + (force ? '?t=' + Date.now() : ''), { cache:'no-cache', headers });
+  const url = BLOBS[which] || BLOBS[0];
+  const r = await fetch(url + (force ? '?t=' + Date.now() : ''), { cache:'no-cache', headers });
   LAST_CHECK = new Date();
   if (r.status === 304) return null;
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -861,7 +871,12 @@ async function load(force = false){
        cache con ?t= mientras la pestaña esta VISIBLE (que es cuando el dueño mira), y se deja el
        camino barato con ETag cuando esta oculta para no gastar datos del movil. */
     const vis = document.visibilityState === 'visible';
-    const env = await fetchBlob(force || vis);
+    let env = null, err = null;
+    for (let i = 0; i < BLOBS.length && !env; i++){
+      try { const e = await fetchBlob(force || vis, i); if (e) env = e; }
+      catch (x){ err = x; }
+    }
+    if (!env) throw (err || new Error('sin respuesta de ningun CDN'));
     if (env === null){ LAST_CHECK = new Date(); return; }
     STATE = await deriveAndDecrypt(pass, env);
     sessionStorage.setItem('fomo_pw', pass);

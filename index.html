@@ -94,6 +94,13 @@ tbody tr:hover{background:rgba(255,45,149,.06)}
 .book-card.control-card{border-top-color:#6366f1}
 .book-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
   padding-bottom:9px;border-bottom:1px solid var(--li)}
+/* Detalle de una posicion al pulsarla: fila desplegable, no modal (en 390 px se compara
+   pulsando la siguiente sin cerrar nada). */
+.pos-row{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pos-row.is-open{background:rgba(255,255,255,.05)}
+.pos-detail-row td{padding:0;border-bottom:1px solid rgba(255,255,255,.12);background:#0d1117}
+.pos-drawer{padding:10px 12px 12px;font-size:11px;color:#9ca3af}
+.pos-empty{padding:10px 4px;color:#6b7280;font-style:italic;font-size:11px}
 .book-title{font-weight:700;font-size:14px;color:#fff}
 .book-sub{font-size:11px;color:var(--di);margin-top:2px}
 .book-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:9px;
@@ -550,7 +557,9 @@ function renderBookPositions(book, animateBox = false){
         : `<div class="di" style="font-size:10.5px"`
           + ` title="${esc(utcLabel(p.opened))} → ${esc(utcLabel(p.closed))}">`
           + `${esc(tsLocal(p.opened))} → ${esc(tsLocal(p.closed))}</div>`;
-      h += `<tr title="coste ${n2(p.cost, 2)} € · ${esc(p.venue || '')}${p.val_src ? ' · ' + esc(p.val_src) : ''}">`
+      const abierta = (window.__openPosId === p.position);
+      h += `<tr class="pos-row${abierta ? ' is-open' : ''}" onclick="togglePos('${p.position}')"
+             title="coste ${n2(p.cost, 2)} € · ${esc(p.venue || '')}${p.val_src ? ' · ' + esc(p.val_src) : ''}">`
         +  `<td><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">${stPill}`
         +  `<b class="mo" style="font-size:11.5px">${esc(sym)}</b></div>${subTime}</td>`
         +  `<td class="num">${p.value === null ? '<span class="wa" title="Sin precio de salida medible">s/p</span>' : n2(p.value, 2)}</td>`
@@ -559,6 +568,7 @@ function renderBookPositions(book, animateBox = false){
             ? `<div class="s" style="font-size:10px">${p.ret > 0 ? '+' : ''}${n2(p.ret * 100, 1)}%</div>` : '')
         +  `</td>`
         +  `<td class="di" style="font-size:10.5px">${esc(String(p.why || '—').slice(0, 42))}</td></tr>`;
+      if (abierta) h += `<tr class="pos-detail-row"><td colspan="4">${renderPosDrawer(p)}</td></tr>`;
     }
     h += `</tbody></table></div>`;
   }
@@ -949,6 +959,93 @@ function pnlChart(book, S) {
       ${unvalN > 0 ? `<span style="color:#f43f5e">┣ ${unvalN} sin precio (−${n2(unvalCost, 2)} €)</span>` : ''}
     </div>
   </div>`;
+}
+
+/* ── detalle de una posicion: historico de liquidez y de valor ──────────────────────────────
+   Diseno de Argon (2026-10-26): dos series superpuestas porque una sola engana. La reserva del
+   pool (area) distingue "la gente vendio" de "el creador retiro la liquidez"; el valor de
+   liquidacion (linea) dice cuanto cobrarias TU con el impacto de tu orden. El estado abierto se
+   guarda en window.__openPosId para que el repintado de cada minuto no lo cierre. */
+window.__openPosId = window.__openPosId || null;
+window.togglePos = function(pid){
+  window.__openPosId = (window.__openPosId === pid) ? null : pid;
+  renderBookPositions(MODEL, false);
+};
+
+function renderPosDrawer(p){
+  const m = p.marks || [];
+  const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+    <span><b style="color:#e5e7eb">${esc(p.symbol || '')}</b> · ${p.state === 'abierta' ? 'abierta' : 'cerrada'}
+      ${p.closed ? '· ' + esc(tsLocal(p.closed)) : ''}</span>
+    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>`;
+  if (m.length < 3){
+    /* P5 de Argon: decir la CAUSA, no "sin histórico" (que parece un fallo del panel). */
+    const inicio = Date.parse('2026-10-19T00:00:00Z');
+    const abrio = Date.parse(p.opened || '');
+    const msg = (Number.isFinite(abrio) && abrio < inicio)
+      ? 'Posición anterior al 19-10, cuando empezó el registro de liquidez (una marca cada ~8 min).'
+      : 'El pool dejó de responder antes de la primera marca (~8 min): o se vació en minutos o nunca se pudo leer.';
+    return `<div class="pos-drawer">${cab}<div class="pos-empty">${msg}</div></div>`;
+  }
+  const W = 330, H = 122, L = 34, R = 8, T = 8, B = 16;
+  const PW = W - L - R, PH = H - T - B;
+  const tMax = Math.max(1, m[m.length - 1][0]);
+  const qMax = Math.max(1, ...m.map(x => x[2] || 0));
+  const vMax = Math.max(...m.map(x => x[1] || 0), Math.round((p.cost || 0) * 100));
+  const X = t => L + PW * (t / tMax);
+  const Yq = q => T + PH * (1 - (q / qMax));
+  const Yv = v => T + PH * (1 - (v / (vMax || 1)));
+  const area = m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq(x[2] || 0).toFixed(1)}`).join('')
+    + `L${X(m[m.length - 1][0]).toFixed(1)},${T + PH}L${X(m[0][0]).toFixed(1)},${T + PH}Z`;
+  const linea = m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yv(x[1] || 0).toFixed(1)}`).join('');
+  const yCoste = Yv(Math.round((p.cost || 0) * 100)).toFixed(1);
+  /* POOL SECO: primer punto en que la reserva cae por debajo del 5% del maximo visto. */
+  const seco = m.find(x => (x[2] || 0) < qMax * 0.05);
+  const marks = `<g>
+    ${seco ? `<line x1="${X(seco[0]).toFixed(1)}" y1="${T}" x2="${X(seco[0]).toFixed(1)}" y2="${T + PH}"
+       stroke="#f43f5e" stroke-width="1.4" stroke-dasharray="3,2"/>
+       <text x="${X(seco[0]).toFixed(1)}" y="${T + 8}" fill="#f43f5e" font-size="8.5" text-anchor="middle">POOL SECO ${seco[0]}m</text>` : ''}
+    <line x1="${L}" y1="${yCoste}" x2="${W - R}" y2="${yCoste}" stroke="#a855f7" stroke-width="1"
+          stroke-dasharray="2,2" stroke-opacity="0.8"/></g>`;
+  window.__posSeries = window.__posSeries || {};
+  window.__posSeries[p.position] = { m, tMax, L, PW, W };
+  const ult = m[m.length - 1];
+  const resumen = `<div data-role="pos-readout" style="font:10.5px ui-monospace,monospace;color:#9ca3af;margin:4px 0 3px">
+    ${m.length} marcas · valor ${n2(ult[1] / 100, 2)} € · pool ${n2(ult[2] / 100, 2)} BNB · pico pool ${n2(qMax / 100, 2)} BNB
+    · <span style="color:#a855f7">coste ${n2(p.cost, 2)} €</span></div>`;
+  return `<div class="pos-drawer">${cab}${resumen}
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
+         onpointerdown="window.__posTap && window.__posTap(event, this, '${esc(p.position)}')">
+      <path d="${area}" fill="#60a5fa" fill-opacity="0.16"/>
+      <path d="${linea}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round"/>
+      ${marks}
+      <line data-role="pos-cursor" x1="0" y1="${T}" x2="0" y2="${T + PH}" stroke="#e5e7eb"
+            stroke-width="1" stroke-dasharray="2,2" style="opacity:0"/>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font:9.5px ui-monospace,monospace;color:#6b7280;margin-top:3px">
+      <span>${esc((p.opened || '').slice(0, 10))} 00:00</span>
+      <span style="color:#60a5fa">▮ liquidez del pool (BNB)</span>
+      <span style="color:#22c55e">━ valor de venta (€)</span>
+      <span>+${tMax}m</span></div></div>`;
+}
+
+if (!window.__posTap){
+  window.__posTap = function(ev, el, pid){
+    const st = (window.__posSeries || {})[pid];
+    if (!st || !st.m.length) return;
+    const r = el.getBoundingClientRect();
+    const cx = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
+    const x = ((cx - r.left) / (r.width || 1)) * st.W;
+    const ratio = Math.max(0, Math.min(1, (x - st.L) / st.PW));
+    const tTarget = ratio * st.tMax;
+    let best = st.m[0];
+    for (const pt of st.m) if (Math.abs(pt[0] - tTarget) < Math.abs(best[0] - tTarget)) best = pt;
+    const cur = el.querySelector('[data-role="pos-cursor"]');
+    const px = (st.L + st.PW * (best[0] / st.tMax)).toFixed(1);
+    if (cur){ cur.setAttribute('x1', px); cur.setAttribute('x2', px); cur.style.opacity = '1'; }
+    const out = el.parentElement.querySelector('[data-role="pos-readout"]');
+    if (out) out.innerHTML = `+${best[0]}m · valor ${n2(best[1] / 100, 2)} € · pool ${n2(best[2] / 100, 2)} BNB`;
+  };
 }
 
 function bookCard(book, S){

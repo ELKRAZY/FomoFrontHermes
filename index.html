@@ -234,10 +234,32 @@ const POLL_MS = 60000;
    fichero ya sea nuevo. jsDelivr se purga con el push y servia el blob al dia (age 0) mientras
    raw daba uno de 154 s. Se pide a jsDelivr primero y raw queda de respaldo: si los dos fallan,
    la pagina lo dice en vez de fingir que esta al dia. */
-const BLOBS = [
-  'https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc',
-  'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc'
-];
+/* Por que se pide el SHA del commit y no la rama:
+   Medido 2026-10-26 11:38 — la rama `state` tenia el blob 5de18b10 (commit 11:37:24) y jsDelivr
+   seguia sirviendo 1e06a7b8 con x-cache HIT y age 260. La purga explicita devuelve 200 pero no
+   invalida, y tanto jsDelivr como raw IGNORAN la query string al cachear (?t= no cambia nada).
+   La unica URL que no puede estar vieja es la que lleva el SHA del commit: cada publicacion crea
+   un commit nuevo, asi que cada SHA es una ruta nueva que el CDN pide a GitHub la primera vez.
+   El SHA se consulta a la API (60 peticiones/hora sin autenticar) cada 90 s -> 40/h, con margen. */
+const GH_COMMITS = 'https://api.github.com/repos/ELKRAZY/FomoFrontHermes/commits/state';
+let SHA = '', SHA_AT = 0;
+async function currentSha(force){
+  if (!force && SHA && Date.now() - SHA_AT < 90000) return SHA;
+  try {
+    const r = await fetch(GH_COMMITS, { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
+    if (!r.ok) throw new Error('api ' + r.status);
+    const t = (await r.text()).trim();
+    if (/^[0-9a-f]{40}$/.test(t)) { SHA = t; SHA_AT = Date.now(); }
+  } catch (e) { /* se queda el SHA anterior: mejor un dato de hace un minuto que ninguno */ }
+  return SHA;
+}
+function blobUrls(){
+  const out = [];
+  if (SHA) out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@' + SHA + '/state.enc');
+  out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc');
+  out.push('https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc');
+  return out;
+}
 
 let STATE = null, LAST_SEEN = {}, FIRST = true;
 let LAST_TS = null, LAST_CHECK = null, NEXT_POLL_AT = Date.now() + POLL_MS;
@@ -403,10 +425,11 @@ async function deriveAndDecrypt(pass, env){
 }
 
 let ETAG = null;
-async function fetchBlob(force = false, which = 0){
+async function fetchBlob(force = false, which = 0, urls = null){
   const headers = {};
-  if (ETAG && !force) headers['If-None-Match'] = ETAG;
-  const url = BLOBS[which] || BLOBS[0];
+  const BL = urls || blobUrls();
+  if (ETAG && !force && which > 0) headers['If-None-Match'] = ETAG;   /* el @sha nunca da 304 */
+  const url = BL[which] || BL[0];
   const r = await fetch(url + (force ? '?t=' + Date.now() : ''), { cache:'no-cache', headers });
   LAST_CHECK = new Date();
   if (r.status === 304) return null;
@@ -949,8 +972,10 @@ async function load(force = false){
        camino barato con ETag cuando esta oculta para no gastar datos del movil. */
     const vis = document.visibilityState === 'visible';
     let env = null, err = null;
-    for (let i = 0; i < BLOBS.length && !env; i++){
-      try { const e = await fetchBlob(force || vis, i); if (e) env = e; }
+    await currentSha(false);
+    const urls = blobUrls();
+    for (let i = 0; i < urls.length && !env; i++){
+      try { const e = await fetchBlob(force || vis, i, urls); if (e) env = e; }
       catch (x){ err = x; }
     }
     if (!env) throw (err || new Error('sin respuesta de ningun CDN'));

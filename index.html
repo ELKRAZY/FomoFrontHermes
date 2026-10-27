@@ -760,7 +760,7 @@ function pnlChart(book, S) {
   const tMax = Math.max(main.tMax, peer ? peer.tMax : 0, tMin + 60e3);
 
   // Dimensiones SVG pensadas para 390px (358px útiles dentro de tarjeta)
-  const W = 358, H = 172;
+  const W = chartW("pnl", 358), H = 172;
   const L = 44, R = 14, T = 14, B = 24;
   const PW = W - L - R, PH = H - T - B;
 
@@ -915,7 +915,7 @@ function pnlChart(book, S) {
     <div data-role="readout" style="font:11px/1.35 ui-monospace,monospace;color:#9ca3af;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
       ${defaultReadout}
     </div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none"
+    <svg data-chart="pnl" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none;-webkit-user-select:none"
          onpointerdown="window.__pnlTapSelect && window.__pnlTapSelect(event, this, '${esc(book)}')">
       <!-- Área de Drawdown desde el High-Water Mark -->
       <path d="${ddD}" fill="#ef4444" fill-opacity="0.13"/>
@@ -993,7 +993,7 @@ function renderPosDrawer(p){
       : 'El pool dejó de responder antes de la primera marca (~8 min): o se vació en minutos o nunca se pudo leer.';
     return `<div class="pos-drawer">${cab}<div class="pos-empty">${msg}</div></div>`;
   }
-  const W = 330, H = 122, L = 34, R = 8, T = 8, B = 16;
+  const W = chartW("pos", 330), H = 122, L = 34, R = 8, T = 8, B = 16;
   const PW = W - L - R, PH = H - T - B;
   const tMax = Math.max(1, m[m.length - 1][0]);
   const qMax = Math.max(1, ...m.map(x => x[2] || 0));
@@ -1021,7 +1021,7 @@ function renderPosDrawer(p){
     ${m.length} marcas · precio ${ult[3] === null ? '—' : n2(ult[3] / 100, 2) + ' €/M'} · valor ${n2(ult[1] / 100, 2)} € · pool ${n2(ult[2] / 100, 2)} ${esc(p.quote || 'BNB')} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
     · <span style="color:#a855f7">coste ${n2(p.cost, 2)} €</span></div>`;
   return `<div class="pos-drawer">${cab}${resumen}
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
+    <svg data-chart="pos" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
          onpointerdown="window.__posTap && window.__posTap(event, this, '${esc(p.position)}')">
       <path d="${area}" fill="#60a5fa" fill-opacity="0.14"/>
       <!-- el borde de la liquidez: sin el, un pool que no se mueve queda como un bloque azul y no
@@ -1064,6 +1064,32 @@ if (!window.__posTap){
     if (out) out.innerHTML = `+${best[0]}m · precio ${best[3] === null ? '—' : n2(best[3] / 100, 2) + ' €/M'}`
       + ` · valor ${n2(best[1] / 100, 2)} € · pool ${n2(best[2] / 100, 2)} ${esc((window.__posQuote || {})[pid] || '')}`;
   };
+}
+
+/* Ancho de dibujo = ancho REAL de la tarjeta, medido tras pintar (measureCharts). En el movil se
+   queda en 330-358 como estaba; en PC la grafica ocupa la tarjeta entera en vez de quedar un
+   recuadro pequeno centrado con 240 px de aire al lado (reportado 2026-10-27: "va rara"). */
+window.__chartW = window.__chartW || {};
+let __chartFix = 0;
+
+function chartW(kind, dflt){
+  const v = (window.__chartW || {})[kind];
+  return v ? Math.max(260, Math.min(1000, Math.round(v))) : dflt;
+}
+
+function measureCharts(){
+  let changed = false;
+  document.querySelectorAll('#root svg[data-chart]').forEach(el => {
+    const kind = el.getAttribute('data-chart');
+    const w = Math.round(el.getBoundingClientRect().width);
+    const vb = (el.getAttribute('viewBox') || '').split(' ');
+    const drawn = parseInt(vb[2], 10);
+    if (w > 0 && drawn > 0 && Math.abs(w - drawn) > 20 && window.__chartW[kind] !== w) {
+      window.__chartW[kind] = w;
+      changed = true;
+    }
+  });
+  if (changed && __chartFix < 2) { __chartFix++; render(); }
 }
 
 /* Coordenada del puntero EN UNIDADES DEL viewBox, sea cual sea el tamano en pantalla. */
@@ -1319,6 +1345,7 @@ function render(){
   h += `</tbody></table></div></details></div>`;
 
   $('#root').innerHTML = h;
+  measureCharts();
   renderBookPositions(MODEL, false);
   renderCandidatesBox();
 

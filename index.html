@@ -868,9 +868,15 @@ function pnlChart(book, S) {
       window.__pnlTapSelect = function (ev, el, bk) {
         const st = window.__pnlCharts && window.__pnlCharts[bk];
         if (!st || !st.pts.length) return;
-        const rect = el.getBoundingClientRect();
-        const clientX = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
-        const svgX = ((clientX - rect.left) / (rect.width || 1)) * st.W;
+        const loc = svgLocal(el, ev);
+        let svgX;
+        if (loc) {
+          svgX = loc.x;
+        } else {                       /* respaldo si getScreenCTM no esta disponible */
+          const rect = el.getBoundingClientRect();
+          const clientX = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
+          svgX = ((clientX - rect.left) / (rect.width || 1)) * st.W;
+        }
         const ratio = Math.max(0, Math.min(1, (svgX - st.L) / st.PW));
         const targetT = st.tMin + ratio * (st.tMax - st.tMin);
         // Búsqueda binaria del cierre anterior o más cercano al toque
@@ -1038,9 +1044,15 @@ if (!window.__posTap){
   window.__posTap = function(ev, el, pid){
     const st = (window.__posSeries || {})[pid];
     if (!st || !st.m.length) return;
-    const r = el.getBoundingClientRect();
-    const cx = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
-    const x = ((cx - r.left) / (r.width || 1)) * st.W;
+    const loc = svgLocal(el, ev);
+    let x;
+    if (loc) {
+      x = loc.x;
+    } else {
+      const r = el.getBoundingClientRect();
+      const cx = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
+      x = ((cx - r.left) / (r.width || 1)) * st.W;
+    }
     const ratio = Math.max(0, Math.min(1, (x - st.L) / st.PW));
     const tTarget = ratio * st.tMax;
     let best = st.m[0];
@@ -1052,6 +1064,16 @@ if (!window.__posTap){
     if (out) out.innerHTML = `+${best[0]}m · precio ${best[3] === null ? '—' : n2(best[3] / 100, 2) + ' €/M'}`
       + ` · valor ${n2(best[1] / 100, 2)} € · pool ${n2(best[2] / 100, 2)} ${esc((window.__posQuote || {})[pid] || '')}`;
   };
+}
+
+/* Coordenada del puntero EN UNIDADES DEL viewBox, sea cual sea el tamano en pantalla. */
+function svgLocal(el, ev){
+  try {
+    const t = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+    const p = el.createSVGPoint();
+    p.x = t.clientX; p.y = t.clientY;
+    return p.matrixTransform(el.getScreenCTM().inverse());
+  } catch (e) { return null; }
 }
 
 function bookCard(book, S){

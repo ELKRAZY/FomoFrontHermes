@@ -1022,10 +1022,20 @@ function renderPosDrawer(p){
             onclick="event.stopPropagation()" style="color:#93c5fd;font-size:10px;text-decoration:none">bscscan ↗</a>
        </div>`
     : `<div style="margin:0 0 6px;font-size:10px;color:#6b7280">contrato no registrado en la posición</div>`;
+  /* Referencia externa: si el pool no contesta pero DexScreener/GeckoTerminal si cotizan el token,
+     se dice cuanto dicen y de donde, SIN convertirlo en valor. No entra en P&L: no trae reservas
+     ni permite calcular el impacto de nuestra venta. */
+  const ext = p.ext_ref || null;
+  const extLine = (p.value === null && ext)
+    ? `<div style="margin:0 0 6px;font-size:10px;color:#fbbf24;line-height:1.35">
+         referencia externa (no es valoración): <b>${Number(ext.price_usd).toPrecision(4)} USD</b>/token
+         · ${esc(ext.src || '')}${ext.age_min != null ? ` · hace ${Math.round(ext.age_min)} min` : ''}
+         ${ext.liq_usd != null ? `· liquidez ${Math.round(ext.liq_usd).toLocaleString('es-ES')} USD` : ''}
+       </div>` : '';
   const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
     <span><b style="color:#e5e7eb">${esc(p.symbol || '')}</b> · ${p.state === 'abierta' ? 'abierta' : 'cerrada'}
       ${p.closed ? '· ' + esc(tsLocal(p.closed)) : ''}</span>
-    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine;
+    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine + extLine;
   if (m.length < 3){
     /* P5 de Argon: decir la CAUSA, no "sin histórico" (que parece un fallo del panel). */
     const inicio = Date.parse('2026-10-19T00:00:00Z');

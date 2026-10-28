@@ -289,7 +289,8 @@ const MODELS = [['screened', '6 patas'], ['control', 'control'], ['trail', 'trai
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
-function gateLabel(){ const n = (((STATE||{}).gate||{}).legs||[]).length; return n ? `puerta · ${n} pata${n===1?'':'s'}` : 'puerta'; }
+function gateCount(){ const n = (((STATE||{}).gate||{}).legs||[]).length; return n ? `${n} pata${n===1?'':'s'}` : 'sin datos'; }
+function gateLabel(){ return 'puerta · ' + gateCount(); }
 function screenedHint(){ const g=(STATE||{}).gate||{}; const legs=g.legs||[]; const v=g.veto_on_fail||[];
   return legs.length ? ('exige ' + legs.map(x=>x.replace(/_/g,' ')).join(', ') + (v.length ? ' (veta solo si el fail es medido)' : ' (todas en pass)'))
                      : 'sin puerta publicada'; }
@@ -1223,7 +1224,7 @@ function render(){
      custodia al pie del KPI de P&L. En 390 px cuatro tarjetas empujaban todo lo demas fuera de la
      primera pantalla. */
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">PUERTA · LAS 6 PATAS</span><span class="pill ${(g.all_legs || 0) > 0 ? 'ok' : 'di'}">${n2(g.all_legs)} pasan</span></div>
+     <span class="s">PUERTA · ${gateCount().toUpperCase()}</span><span class="pill ${(g.all_legs || 0) > 0 ? 'ok' : 'di'}">${n2(g.all_legs)} pasan</span></div>
      <div class="big" style="margin-top:6px">${n2(g.all_legs)}<span class="di" style="font-size:13px"> / ${n2(g.screened)} cribados</span></div>
      <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">

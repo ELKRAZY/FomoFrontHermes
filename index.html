@@ -286,6 +286,13 @@ let CAND_FILTER = 'all';
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
 const MODELS = [['screened', '6 patas'], ['control', 'control'], ['trail', 'trailing']];
+/* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
+   la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
+   mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
+function gateLabel(){ const n = (((STATE||{}).gate||{}).legs||[]).length; return n ? `puerta · ${n} pata${n===1?'':'s'}` : 'puerta'; }
+function screenedHint(){ const g=(STATE||{}).gate||{}; const legs=g.legs||[]; const v=g.veto_on_fail||[];
+  return legs.length ? ('exige ' + legs.map(x=>x.replace(/_/g,' ')).join(', ') + (v.length ? ' (veta solo si el fail es medido)' : ' (todas en pass)'))
+                     : 'sin puerta publicada'; }
 window.setModel = function(k){
   MODEL = k;
   try { localStorage.setItem('fomo_model', k); } catch(e){}
@@ -294,8 +301,10 @@ window.setModel = function(k){
 };
 function paintModels(){
   const sm = $('#seg-model');
-  if (sm) sm.innerHTML = MODELS.map(([k, l]) =>
-    `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${l}</button>`).join('');
+  if (sm) sm.innerHTML = MODELS.map(([k, l]) => {
+    const label = (k === 'screened') ? gateLabel() : l;   /* nombre real de la puerta */
+    return `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${label}</button>`;
+  }).join('');
 }
 
 let PERIOD = 'epoch';
@@ -1114,10 +1123,10 @@ function bookCard(book, S){
   const openAll = P.filter(p => p.state === 'abierta').length;
   let h = `<div class="p book-card ${isScr?'':'control-card'}">`
     + `<div class="book-hdr"><div>`
-    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · 6 patas'
+    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · ' + gateLabel()
         : isTrail ? '🪂 TRAILING · deja correr' : '🧪 CONTROL · cortes gratis'}</div>`
     + `<div class="book-sub">${isScr
-        ? 'exige mint, freeze, concentración, honeypot, nonce ≤ 5 y LP bloqueado'
+        ? screenedHint()
         : isTrail
         ? 'misma compra que control; pasadas 24 h solo cierra si el pool pierde la mitad de su pico'
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`

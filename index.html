@@ -983,6 +983,26 @@ function pnlChart(book, S) {
    liquidacion (linea) dice cuanto cobrarias TU con el impacto de tu orden. El estado abierto se
    guarda en window.__openPosId para que el repintado de cada minuto no lo cierre. */
 window.__openPosId = window.__openPosId || null;
+
+/* Copiar la direccion. navigator.clipboard exige contexto seguro; si no esta, se usa el truco del
+   textarea, que funciona igual en el movil. El boton dice "copiado" 1,2 s. */
+window.copyAddr = function(addr, btn){
+  const ok = () => { const t = btn.textContent; btn.textContent = 'copiado ✓';
+                     setTimeout(() => { btn.textContent = t; }, 1200); };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(addr).then(ok, () => fallback());
+    } else { fallback(); }
+  } catch (e) { fallback(); }
+  function fallback(){
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); ok();
+    } catch (e) { btn.textContent = 'no se pudo'; }
+  }
+};
 window.togglePos = function(pid){
   window.__openPosId = (window.__openPosId === pid) ? null : pid;
   renderBookPositions(MODEL, false);
@@ -990,10 +1010,22 @@ window.togglePos = function(pid){
 
 function renderPosDrawer(p){
   const m = p.marks || [];
-  const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+  /* Contrato del token: sin esto, para comprobarlo fuera del panel habia que copiarlo de otro sitio.
+     Se muestra corto y se copia entero con un toque; el enlace va a BscScan. */
+  const addr = (p.address || '').toLowerCase();
+  const addrLine = addr
+    ? `<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px;flex-wrap:wrap">
+         <span style="font:10.5px ui-monospace,monospace;color:#9ca3af">${esc(addr.slice(0, 10))}…${esc(addr.slice(-6))}</span>
+         <button type="button" onclick="event.stopPropagation();copyAddr('${esc(addr)}', this)"
+                 style="background:#1f2937;border:0;color:#93c5fd;font:10px ui-monospace,monospace;padding:2px 7px;border-radius:6px">copiar</button>
+         <a href="https://bscscan.com/token/${esc(addr)}" target="_blank" rel="noopener"
+            onclick="event.stopPropagation()" style="color:#93c5fd;font-size:10px;text-decoration:none">bscscan ↗</a>
+       </div>`
+    : `<div style="margin:0 0 6px;font-size:10px;color:#6b7280">contrato no registrado en la posición</div>`;
+  const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
     <span><b style="color:#e5e7eb">${esc(p.symbol || '')}</b> · ${p.state === 'abierta' ? 'abierta' : 'cerrada'}
       ${p.closed ? '· ' + esc(tsLocal(p.closed)) : ''}</span>
-    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>`;
+    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine;
   if (m.length < 3){
     /* P5 de Argon: decir la CAUSA, no "sin histórico" (que parece un fallo del panel). */
     const inicio = Date.parse('2026-10-19T00:00:00Z');

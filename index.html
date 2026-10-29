@@ -1025,6 +1025,13 @@ function renderPosDrawer(p){
   /* Referencia externa: si el pool no contesta pero DexScreener/GeckoTerminal si cotizan el token,
      se dice cuanto dicen y de donde, SIN convertirlo en valor. No entra en P&L: no trae reservas
      ni permite calcular el impacto de nuestra venta. */
+  /* Antiguedad del dato: la fila mostraba "139 EUR" de una posicion de 5,13 sin decir que esa
+     lectura tenia minutos. Si el pool muere entre dos marcas, el numero es viejo, no falso. */
+  const _age = /cache_pool_\w+\((\d+)min\)/.exec(String(p.val_src || ''));
+  const ageLine = (_age && p.value !== null)
+    ? `<div style="margin:0 0 6px;font-size:10px;color:${Number(_age[1]) >= 4 ? '#fbbf24' : '#6b7280'}">
+         lectura del pool de hace ${_age[1]} min${Number(_age[1]) >= 4 ? ' · puede no ser el valor de ahora' : ''}
+       </div>` : '';
   const ext = p.ext_ref || null;
   const extLine = (p.value === null && ext)
     ? `<div style="margin:0 0 6px;font-size:10px;color:#fbbf24;line-height:1.35">
@@ -1035,7 +1042,7 @@ function renderPosDrawer(p){
   const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
     <span><b style="color:#e5e7eb">${esc(p.symbol || '')}</b> · ${p.state === 'abierta' ? 'abierta' : 'cerrada'}
       ${p.closed ? '· ' + esc(tsLocal(p.closed)) : ''}</span>
-    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine + extLine;
+    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine + ageLine + extLine;
   if (m.length < 3){
     /* P5 de Argon: decir la CAUSA, no "sin histórico" (que parece un fallo del panel). */
     const inicio = Date.parse('2026-10-19T00:00:00Z');

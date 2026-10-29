@@ -1028,9 +1028,12 @@ function renderPosDrawer(p){
   /* Antiguedad del dato: la fila mostraba "139 EUR" de una posicion de 5,13 sin decir que esa
      lectura tenia minutos. Si el pool muere entre dos marcas, el numero es viejo, no falso. */
   const _age = /cache_pool_\w+\((\d+)min\)/.exec(String(p.val_src || ''));
+  // Umbral corregido: con livepools cada 3 minutos, una edad de 4 es NORMAL (la pasada anterior).
+  // Avisar a los 4 convertia el aviso en ruido permanente. Ambar solo si se han perdido dos pasadas.
+  const _stale = _age && Number(_age[1]) >= 7;
   const ageLine = (_age && p.value !== null)
-    ? `<div style="margin:0 0 6px;font-size:10px;color:${Number(_age[1]) >= 4 ? '#fbbf24' : '#6b7280'}">
-         lectura del pool de hace ${_age[1]} min${Number(_age[1]) >= 4 ? ' · puede no ser el valor de ahora' : ''}
+    ? `<div style="margin:0 0 6px;font-size:10px;color:${_stale ? '#fbbf24' : '#6b7280'}">
+         lectura del pool de hace ${_age[1]} min${_stale ? ' · dos pasadas perdidas: puede no ser el valor de ahora' : ''}
        </div>` : '';
   const ext = p.ext_ref || null;
   const extLine = (p.value === null && ext)

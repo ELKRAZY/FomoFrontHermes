@@ -1181,6 +1181,15 @@ function bookCard(book, S){
         : isFork ? '🧬 FORK CONTROL · cohorte'
         : isAlt ? '🧯 CONTROL SOLVENCIA · 24h o pool<100x valor'
         : isNm ? '💸 SIN DINERO NUEVO · 24h o dobla sin que crezca el pool' : '🧪 CONTROL · cortes gratis'}</div>`
+    + (() => {
+        const sr = (S.book[book] || {}).since_rule;
+        if (!sr) return '';
+        const v = sr.realized || 0;
+        return `<div style="font:10px ui-monospace,monospace;color:#9ca3af;margin:2px 0 4px">
+          desde la regla vigente (${esc(sr.cut.slice(0, 10))}): <b>${sr.closed}</b> cerradas ·
+          <b style="color:${v > 0 ? '#22c55e' : v < 0 ? '#f43f5e' : '#9ca3af'}">${v > 0 ? '+' : ''}${n2(v, 2)} €</b>
+          · ${sr.excluded} anteriores quedan FUERA de esta cifra (siguen en el registro)</div>`;
+      })()
     + `<div class="book-sub">${isScr
         ? screenedHint()
         : isTrail

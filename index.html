@@ -1058,19 +1058,12 @@ function renderPosDrawer(p){
   const W = chartW("pos", 330), H = 122, L = 34, R = 8, T = 8, B = 16;
   const PW = W - L - R, PH = H - T - B;
   const tMax = Math.max(1, m[m.length - 1][0]);
-  /* UN SOLO EJE, EN EUROS Y EN ESCALA LOG: la liquidez (azul) y el valor (verde) se dibujan sobre
-     la misma escala, asi que cuando las dos lineas se tocan es porque los numeros se tocan. Antes
-     cada serie tenia su propio maximo, y eso inventaba cruces (PREDICT: el "casi se tocan" era el
-     pool 4.645x por encima del valor; 0x32ca: 1.119x). Log porque la diferencia normal es de miles
-     de veces: en lineal el valor seria una raya plana en el suelo. */
   const qMax = Math.max(1, ...m.map(x => x[2] || 0));
-  const seriePool = m.map(x => (x[4] != null ? x[4] : (x[2] || 0)));
-  const allMax = Math.max(1, ...m.map(x => x[1] || 0), ...seriePool, Math.round((p.cost || 0) * 100));
-  const lmax = Math.log10(allMax + 1);
+  const vMax = Math.max(...m.map(x => x[1] || 0), Math.round((p.cost || 0) * 100));
   const X = t => L + PW * (t / tMax);
-  const Yv = v => T + PH * (1 - (Math.log10(Math.max(0, v) + 1) / (lmax || 1)));
-  const Yq = Yv;
-  const area = m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq((x[4] != null ? x[4] : (x[2] || 0))).toFixed(1)}`).join('')
+  const Yq = q => T + PH * (1 - (q / qMax));
+  const Yv = v => T + PH * (1 - (v / (vMax || 1)));
+  const area = m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq(x[2] || 0).toFixed(1)}`).join('')
     + `L${X(m[m.length - 1][0]).toFixed(1)},${T + PH}L${X(m[0][0]).toFixed(1)},${T + PH}Z`;
   const linea = m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yv(x[1] || 0).toFixed(1)}`).join('');
   const yCoste = Yv(Math.round((p.cost || 0) * 100)).toFixed(1);
@@ -1095,7 +1088,7 @@ function renderPosDrawer(p){
       <path d="${area}" fill="#60a5fa" fill-opacity="0.14"/>
       <!-- el borde de la liquidez: sin el, un pool que no se mueve queda como un bloque azul y no
            se ve la forma; con el, una caida del 80% se lee igual aunque el area tape el fondo -->
-      <path d="${m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq((x[4] != null ? x[4] : (x[2] || 0))).toFixed(1)}`).join('')}"
+      <path d="${m.map((x, i) => `${i ? 'L' : 'M'}${X(x[0]).toFixed(1)},${Yq(x[2] || 0).toFixed(1)}`).join('')}"
             fill="none" stroke="#60a5fa" stroke-width="1.1" stroke-opacity="0.9"/>
       <path d="${linea}" fill="none" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round"/>
       ${marks}
@@ -1106,7 +1099,7 @@ function renderPosDrawer(p){
       <span>${esc((p.opened || '').slice(0, 10))} 00:00</span>
       <span style="color:#60a5fa">▮ pool (${esc(p.quote || 'BNB')})</span>
       <span style="color:#22c55e">━ valor (€)</span>
-      <span style="color:#6b7280">mismo eje (€, log)</span>
+      <span style="color:#fbbf24">escalas distintas · el cruce no significa nada</span>
       <span>+${tMax}m</span></div></div>`;
 }
 

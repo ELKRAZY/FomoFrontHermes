@@ -325,6 +325,8 @@ function periodLabel(){
   const p = PERIODS.find(x => x[0] === PERIOD);
   return p ? p[1] : 'Época';
 }
+let POS_SORT = 'recent';
+window.setPosSort = function(k){ POS_SORT = k; renderBookPositions(MODEL, false); };
 window.setPeriod = function(k){
   PERIOD = k;
   paintSeg();
@@ -502,10 +504,17 @@ function renderBookPositions(book, animateBox = false){
       `<button class="${fKey==='all'?'on':''}" onclick="setBookFilter('${book}','all')">Todas <span class="cnt">${cnt.all}</span></button>`
     + `<button class="${fKey==='open'?'on':''}" onclick="setBookFilter('${book}','open')">Abiertas <span class="cnt">${cnt.open}</span></button>`
     + `<button class="win ${fKey==='win'?'on':''}" onclick="setBookFilter('${book}','win')">Ganadoras <span class="cnt">${cnt.win}</span></button>`
-    + `<button class="loss ${fKey==='loss'?'on':''}" onclick="setBookFilter('${book}','loss')">Perdedoras <span class="cnt">${cnt.loss}</span></button>`;
+    + `<button class="loss ${fKey==='loss'?'on':''}" onclick="setBookFilter('${book}','loss')">Perdedoras <span class="cnt">${cnt.loss}</span></button>`
+    + (fKey === 'open'
+        ? `<button class="${POS_SORT==='pnl'?'on':''}" onclick="setPosSort('${POS_SORT==='pnl'?'recent':'pnl'}')">P&L ↓</button>`
+        : '');
   }
 
   let rows = fKey === 'all' ? P : P.filter(p => PF_BUCKET(p) === fKey);
+  // Orden de las ABIERTAS a peticion del owner: por P&L de mayor a menor. El resto de vistas se
+  // queda como esta (por fecha), porque ahi el orden cronologico es lo que se lee.
+  if (fKey === 'open' && POS_SORT === 'pnl')
+    rows = rows.slice().sort((a, b) => ((b.pnl ?? -1e9) - (a.pnl ?? -1e9)));
   if (q){
     rows = rows.filter(p =>
       String(p.symbol || '').toLowerCase().includes(q) ||

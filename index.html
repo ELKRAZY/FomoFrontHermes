@@ -1097,8 +1097,9 @@ function renderPosDrawer(p){
     </svg>
     <div style="display:flex;justify-content:space-between;font:9.5px ui-monospace,monospace;color:#6b7280;margin-top:3px">
       <span>${esc((p.opened || '').slice(0, 10))} 00:00</span>
-      <span style="color:#60a5fa">▮ liquidez del pool (${esc(p.quote || 'BNB')})</span>
-      <span style="color:#22c55e">━ valor de venta (€)</span>
+      <span style="color:#60a5fa">▮ pool (${esc(p.quote || 'BNB')})</span>
+      <span style="color:#22c55e">━ valor (€)</span>
+      <span style="color:#fbbf24">escalas distintas · el cruce no significa nada</span>
       <span>+${tMax}m</span></div></div>`;
 }
 

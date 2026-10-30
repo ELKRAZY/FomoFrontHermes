@@ -331,8 +331,9 @@ window.setPeriod = function(k){
   paintModels();
   /* Solo el libro visible: la tarjeta de trail no se pintaba nunca porque esta lista estaba
      escrita a mano con screened y control, y por eso sus filtros y su lista salian vacios. */
-  renderBookPositions(MODEL, true);
-  renderCandidatesBox();
+  // render() completo: antes solo se repintaban las tablas y la caja de candidatas, asi que el
+  // P&L de arriba se quedaba clavado en el total de la epoca y el selector parecia roto.
+  render();
 };
 function paintSeg(){
   const sp = $('#seg-period');

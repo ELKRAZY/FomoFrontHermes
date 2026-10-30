@@ -1280,8 +1280,16 @@ function render(){
   // los libros espejo (trail, fork) repiten compras de control, asi que sumar cualquiera de ellos
   // cuenta la misma operacion dos veces. Se muestra el mayor y se dice de que libro es.
   const scr = BK.screened || { realized:0 }, ctl = BK.control || { realized:0 };
-  const _books = ['control','screened','trail','fork']
-    .map(k => ({ k, v: ((BK[k] || {}).realized || 0), u: ((BK[k] || {}).unvalued_cost || 0) }))
+  // El KPI sigue al selector de periodo: con Hoy/7d/30d usa el resultado de esa ventana, no el
+  // total de la epoca. Y entran TODOS los libros (faltaban alt y nomoney).
+  const _pk = (PERIOD && PERIOD !== 'epoch') ? PERIOD : 'epoch';
+  const _books = ['control','screened','trail','fork','alt','nomoney']
+    .map(k => {
+      const b = BK[k] || {};
+      const per = (b.periods || {})[_pk] || {};
+      return { k, v: (per.realized != null ? per.realized : (b.realized || 0)),
+               u: (b.unvalued_cost || 0), n: per.closed, w: per.winners };
+    })
     .filter(x => BK[x.k]);
   const _best = _books.reduce((a, b) => (b.v > a.v ? b : a), _books[0] || { k:'—', v:0, u:0 });
   const totalRealized = _best.v || 0;
@@ -1298,7 +1306,7 @@ function render(){
      <div class="big" style="margin-top:6px">${n2(g.all_legs)}<span class="di" style="font-size:13px"> / ${n2(g.screened)} cribados</span></div>
      <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">P&amp;L REALIZADO · ÉPOCA · mayor: ${esc(bestBook)}</span>
+     <span class="s">P&amp;L REALIZADO · ${PERIOD === '24h' ? 'HOY' : PERIOD === '7d' ? '7 DÍAS' : PERIOD === '30d' ? '30 DÍAS' : 'ÉPOCA'} · mayor: ${esc(bestBook)}</span>
      <span class="pill ${totalRealized>=10?'ok':'bad'}" title="criterio +1% a +2%/mes sobre 1.000 EUR en papel">${totalRealized>=10?'META ✓':'META ✗'}</span></div>
      <div class="big ${totalRealized>0?'ok':totalRealized<0?'bad':'di'}" style="margin-top:6px">${totalRealized>0?'+':''}${n2(totalRealized,2)} €</div>
      <div class="s" style="margin-top:4px">Criterio: <b>+1% a +2%/mes</b> · capital real

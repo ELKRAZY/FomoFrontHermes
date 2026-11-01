@@ -287,7 +287,7 @@ let CAND_FILTER = 'all';
    seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
-const MODELS = [['live', '💶 LIVE · dinero real'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
+const MODELS = [['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
@@ -1179,7 +1179,7 @@ function svgLocal(el, ev){
 function bookCard(book, S){
   const b = (S.book || {})[book];
   if (!b) return '';
-  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw';
+  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw', isLive = book === 'live';
   const P = b.positions || [];
   let nWin = 0, nLoss = 0, nOpen = 0;
   for (const p of P){ const k = PF_BUCKET(p); if (k==='win') nWin++; else if (k==='loss') nLoss++; else nOpen++; }
@@ -1193,7 +1193,9 @@ function bookCard(book, S){
         : isFork ? '🧬 FORK CONTROL · cohorte'
         : isAlt ? '🧯 CONTROL SOLVENCIA · 24h o pool<100x valor'
         : isNm ? '💸 SIN DINERO · 24h o dobla sin pool'
-        : isCw ? '👛 CONTROL · gemelo wallet' : '🧪 CONTROL · cortes gratis'}</div>`
+        : isCw ? '👛 CONTROL · gemelo wallet'
+        : isLive ? '💶 LIVE'
+        : '🧪 CONTROL · cortes gratis'}</div>`
     + (() => {
         const sr = (S.book[book] || {}).since_rule;
         if (!sr) return '';
@@ -1214,7 +1216,7 @@ function bookCard(book, S){
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
     + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
     + `<div class="book-metrics">`
-    + `<div class="bm-item"><div class="bm-lbl">Capital sim</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'Capital real' : 'Capital sim'}</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Disponible</div><div class="bm-val" data-k="av-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Desplegado</div><div class="bm-val" data-k="de-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Realizado</div><div class="bm-val ${b.realized>0?'ok':b.realized<0?'bad':'di'}">${b.realized>0?'+':''}${n2(b.realized,2)}</div></div>`

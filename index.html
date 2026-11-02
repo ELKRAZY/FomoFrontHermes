@@ -1338,7 +1338,10 @@ function render(){
     const _m = S.sol_names;
     const _walk = (o) => {
       if (!o || typeof o !== 'object') return;
-      const a = o.address || o.token || o.mint || o.token_address;
+      let a = o.address || o.token || o.mint || o.token_address;
+      // Las filas cerradas pueden no traer address: el mint va dentro del position_id
+      // ('sol:<mint>:<ts>'), y sin esto se quedaban con el abreviado.
+      if (!a && o.position && o.position.indexOf(':') > 0) a = o.position.split(':')[1];
       // No basta con rellenar cuando falta: las filas cerradas traen el mint abreviado
       // ("SCGBBn…STNK"), que no esta vacio y se quedaba ahi. Si la direccion esta en el mapa,
       // el nombre manda siempre.

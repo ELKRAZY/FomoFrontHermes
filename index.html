@@ -1039,14 +1039,15 @@ function renderPosDrawer(p){
          <span style="font:10.5px ui-monospace,monospace;color:#9ca3af">${esc(addr.slice(0, 10))}…${esc(addr.slice(-6))}</span>
          <button type="button" onclick="event.stopPropagation();copyAddr('${esc(addr)}', this)"
                  style="background:#1f2937;border:0;color:#93c5fd;font:10px ui-monospace,monospace;padding:2px 7px;border-radius:6px">copiar</button>
-         <a href="https://bscscan.com/token/${esc(addr)}" target="_blank" rel="noopener"
-            onclick="event.stopPropagation()" style="color:#93c5fd;font-size:10px;text-decoration:none">bscscan ↗</a>
+         <a href="${p.cohort && p.cohort.indexOf('sol') === 0 ? 'https://solscan.io/token/' : 'https://bscscan.com/token/'}${esc(addr)}" target="_blank" rel="noopener"
+            onclick="event.stopPropagation()" style="color:#93c5fd;font-size:10px;text-decoration:none">${p.cohort && p.cohort.indexOf('sol') === 0 ? 'solscan' : 'bscscan'} ↗</a>
        </div>`
     : `<div style="margin:0 0 6px;font-size:10px;color:#6b7280">contrato no registrado en la posición</div>`;
   // En el libro live el fill tiene hash de transaccion: sin el enlace, comprobar que esa compra o
   // venta existio obliga a buscarla a mano en BscScan.
-  const txLine = (p.cohort === 'live' && p.tx && p.tx !== '0x0')
-    ? `<div style="margin:0 0 6px"><a href="https://bscscan.com/tx/${esc(p.tx)}" target="_blank"
+  const _esSol = p.cohort && p.cohort.indexOf('sol') === 0;
+  const txLine = ((p.cohort === 'live' || _esSol) && p.tx && p.tx !== '0x0' && p.tx !== 'paper' && p.tx !== 'dry')
+    ? `<div style="margin:0 0 6px"><a href="${_esSol ? 'https://solscan.io/tx/' : 'https://bscscan.com/tx/'}${esc(p.tx)}" target="_blank"
          rel="noopener" onclick="event.stopPropagation()"
          style="color:#93c5fd;font-size:10px;text-decoration:none">tx ${esc(String(p.tx).slice(0,10))}…${esc(String(p.tx).slice(-6))} ↗</a></div>`
     : '';

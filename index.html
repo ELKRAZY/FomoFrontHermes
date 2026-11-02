@@ -1205,14 +1205,17 @@ function bookCard(book, S){
           <b style="color:${v > 0 ? '#22c55e' : v < 0 ? '#f43f5e' : '#9ca3af'}">${v > 0 ? '+' : ''}${n2(v, 2)} €</b>
           · ${sr.excluded} anteriores quedan FUERA de esta cifra (siguen en el registro)</div>`;
       })()
-    + `<div class="book-sub">${isScr
+    + `<div class="book-sub">${isLive
+        ? 'ejecucion REAL on-chain · ticket 5 € · salida 24 h · tope 22 posiciones · compra a los 90 min de la decision'
+        : isScr
         ? screenedHint()
         : isTrail
         ? 'misma compra que control; pasadas 24 h solo cierra si el pool pierde la mitad de su pico'
         : isCw
-        ? ('copia de papel de control: misma compra, mismo gas, misma salida. Wallet real '
+        ? ('sombra de papel PRE-LIVE: replica las compras de control sin ejecutar nada on-chain. '
+           + 'La wallet real '
            + (((S.money || {}).wallet_short) || 'sin dirección publicada')
-           + ' — este libro NO opera con ella, y la dirección no entra en ningún precio')
+           + ' opera en 💶 LIVE, no en este libro')
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
     + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
     + `<div class="book-metrics">`
@@ -1256,8 +1259,15 @@ function bookCard(book, S){
 function render(){
   const S = STATE;
   if (!S) return;
+  // El pie decia "papel, sin dinero real" cuando ya hay ejecucion real: mentia en la primera
+  // linea que lee el owner. Ahora se deriva del libro live, no de una constante.
+  const _LV = (S.book && S.book.live) || {};
+  const _lvOpen = _LV.open || 0, _lvRisk = _LV.deployed || 0, _lvReal = _LV.realized || 0;
   $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
-    + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · papel, sin dinero real`;
+    + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · `
+    + (_lvOpen
+        ? `DINERO REAL: ${_lvOpen} abiertas · ${n2(_lvRisk, 2)} € en riesgo · P&L real ${_lvReal >= 0 ? '+' : ''}${n2(_lvReal, 2)} €`
+        : `DINERO REAL: sin posiciones abiertas · P&L real ${_lvReal >= 0 ? '+' : ''}${n2(_lvReal, 2)} €`);
   /* Aviso de dato viejo: AES-GCM garantiza que el blob lo cifro el VPS, no CUANDO. Si el CDN sirve
      una copia antigua (o un proxy la retiene) el JSON descifra sin error y parece actual. Con el
      sello `generated_at` dentro del texto cifrado, la pagina puede decirlo: a partir de 120 s se
@@ -1310,10 +1320,17 @@ function render(){
                u: (b.unvalued_cost || 0), n: per.closed, w: per.winners };
     })
     .filter(x => BK[x.k]);
-  const _best = _books.reduce((a, b) => (b.v > a.v ? b : a), _books[0] || { k:'—', v:0, u:0 });
-  const totalRealized = _best.v || 0;
-  const totalUnval = _best.u || 0;
-  const bestBook = _best.k;
+  // El titular de P&L es el DINERO REAL y el maximo de papel queda como referencia. La regla del
+  // owner (max entre libros, 2026-10-28) existia porque los libros espejo repiten las mismas
+  // compras y sumarlos cuenta doble; con live dentro del max, un libro de papel podia tapar la
+  // cifra real, que es justo la que no se puede maquillar.
+  const _sim = _books.filter(x => x.k !== 'live');
+  const _best = _sim.reduce((a, b) => (b.v > a.v ? b : a), _sim[0] || { k:'—', v:0, u:0 });
+  const _liveRow = _books.find(x => x.k === 'live') || { v: 0, u: 0, n: 0, w: 0 };
+  const totalRealized = _liveRow.v || 0;
+  const totalUnval = _liveRow.u || 0;
+  const bestBook = 'live';
+  const paperBest = _best.v || 0, paperBestBook = _best.k;
   const rows = (S.integrity.tables || []).reduce((a,t) => a + (t.rows || 0), 0);
 
   let h = '<div class="g-kpi">';
@@ -1326,7 +1343,7 @@ function render(){
      <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
      <span class="s">P&amp;L REALIZADO · ${PERIOD === '24h' ? 'HOY' : PERIOD === '7d' ? '7 DÍAS' : PERIOD === '30d' ? '30 DÍAS' : 'ÉPOCA'} · mayor: ${esc(bestBook)}</span>
-     <span class="pill ${totalRealized>=10?'ok':'bad'}" title="criterio +1% a +2%/mes sobre 1.000 EUR en papel">${totalRealized>=10?'META ✓':'META ✗'}</span></div>
+     <span class="pill ${totalRealized>0?'ok':(totalRealized<0?'bad':'wa')}" title="cifra de DINERO REAL. Referencia de papel (maximo entre libros espejo, sin sumar): ${n2(paperBest,2)} EUR en ${paperBestBook}">${totalRealized>0?'REAL ▲':(totalRealized<0?'REAL ▼':'REAL =')}</span></div>
      <div class="big ${totalRealized>0?'ok':totalRealized<0?'bad':'di'}" style="margin-top:6px">${totalRealized>0?'+':''}${n2(totalRealized,2)} €</div>
      <div class="s" style="margin-top:4px">Criterio: <b>+1% a +2%/mes</b> · capital real
         <b class="mo" data-k="cash">0</b> <span class="di">congelado · ticket ${esc(S.money.per_position)} €</span></div>

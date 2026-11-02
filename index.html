@@ -382,7 +382,7 @@ function renderEngine(S){
   const book = e.last_open_book === 'screened' ? 'estrategia'
     : (e.last_open_book === 'control' ? 'control' : '—');
   box.innerHTML =
-    `<span><span class="dot${stale ? ' stale' : ''}"></span> Ciclo ${ageMin === null ? '—' : (ageMin > 45 ? 'PARADO · últimos datos hace ' + ago(e.last_cycle_at) : 'hace ' + ago(e.last_cycle_at))}`
+    `<span><span class="dot${stale ? ' stale' : ''}"></span> Ciclo ${ageMin === null ? '—' : ((S.paper_paused || ageMin > 45) ? 'PARADO · últimos datos hace ' + ago(e.last_cycle_at) : 'hace ' + ago(e.last_cycle_at))}`
     + ` · 1 h: <b>${n2(e.candidates_1h)}</b> nuevos / <b>${n2(e.screened_1h)}</b> cribados`
     + ` · <b>${n2(e.opens_1h)}</b> abiertas</span>`
     + `<span>Freno: <b>${tr}</b> · últ. apertura ${e.last_open_at ? ago(e.last_open_at) : '—'} (${esc(book)})</span>`;

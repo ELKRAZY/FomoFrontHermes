@@ -1690,7 +1690,12 @@ $('#btn-lock').addEventListener('click', () => {
 });
 $('#rem-local').checked = remIntent();
 load();
-setInterval(() => load(true), POLL_MS);   // force: salta la cache del CDN en cada sondeo
+setInterval(() => load(true), POLL_MS);
+// El movil suspende el sondeo cuando la pestaña deja de estar visible; al volver, se refresca
+// al instante en vez de esperar al siguiente tick (o quedarse con lo ultimo que tenia).
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(true); });
+window.addEventListener('focus', () => load(true));
+window.addEventListener('pageshow', (e) => { if (e.persisted) load(true); });   // force: salta la cache del CDN en cada sondeo
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') load(true);
 });

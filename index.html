@@ -1357,10 +1357,19 @@ function render(){
   /* Dos KPIs, no cuatro: la integridad pasa al badge del header (si se rompe, ya sale #warn) y la
      custodia al pie del KPI de P&L. En 390 px cuatro tarjetas empujaban todo lo demas fuera de la
      primera pantalla. */
+  /* Embudo de 24 h, en el orden en que el dinero recorre la tuberia. Antes esta tarjeta mezclaba
+     acumulados desde el origen (unicos, sin ventana) con "reales 1/5", que no medía nada. */
+  const F = S.funnel || {};
+  const _f = (v) => (v === undefined || v === null) ? '—' : n2(v);
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">PUERTA · ${gateCount().toUpperCase()}</span><span class="pill ${(g.all_legs || 0) > 0 ? 'ok' : 'di'}">${n2(g.all_legs)} pasan</span></div>
-     <div class="big" style="margin-top:6px">${n2(g.all_legs)}<span class="di" style="font-size:13px"> / ${n2(g.screened)} cribados</span></div>
-     <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
+     <span class="s">EMBUDO · 24 H</span><span class="pill ${(F.live_ok||0)>0?'ok':'di'}">${_f(F.live_ok)} live</span></div>
+     <div class="s" style="margin-top:6px;line-height:1.55">
+       <div>1 · cribado 4 patas <b>${_f(F.pasan_4)}</b> <span class="di">de ${_f(F.cribados_24h)}</span></div>
+       <div>2 · en espera T+90m <b>${_f(F.pendientes)}</b> <span class="di">· maduros ${_f(F.maduros)}</span></div>
+       <div>3 · venta simulada <b>${_f(F.sim)}</b> <span class="di">· vendedores ${_f(F.sellers)}</span></div>
+       <div>4 · ejecución live <b>${_f(F.live_ok)}</b> <span class="di">· fallos ${_f(F.live_fail)}</span></div>
+       <div>5 · papel <b>${_f(F.papel)}</b> <span class="di">entradas</span></div>
+     </div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
      <span class="s">P&amp;L REALIZADO · ${PERIOD === '24h' ? 'HOY' : PERIOD === '7d' ? '7 DÍAS' : PERIOD === '30d' ? '30 DÍAS' : 'ÉPOCA'} · libro live</span>
      <span class="pill ${totalRealized>0?'ok':(totalRealized<0?'bad':'wa')}" title="cifra de DINERO REAL. Referencia de papel (maximo entre libros espejo, sin sumar): ${n2(paperBest,2)} EUR en ${paperBestBook}">${totalRealized>0?'REAL ▲':(totalRealized<0?'REAL ▼':'REAL =')}</span></div>

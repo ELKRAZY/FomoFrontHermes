@@ -1336,10 +1336,11 @@ function render(){
     const _m = S.sol_names;
     const _walk = (o) => {
       if (!o || typeof o !== 'object') return;
-      if (o.symbol === undefined || o.symbol === null || o.symbol === '') {
-        const a = o.address || o.token || o.mint || o.token_address;
-        if (a && _m[a]) o.symbol = _m[a];
-      }
+      const a = o.address || o.token || o.mint || o.token_address;
+      // No basta con rellenar cuando falta: las filas cerradas traen el mint abreviado
+      // ("SCGBBn…STNK"), que no esta vacio y se quedaba ahi. Si la direccion esta en el mapa,
+      // el nombre manda siempre.
+      if (a && _m[a] && (!o.symbol || String(o.symbol).indexOf('…') !== -1)) o.symbol = _m[a];
       for (const k in o) if (typeof o[k] === 'object') _walk(o[k]);
     };
     _walk(S);

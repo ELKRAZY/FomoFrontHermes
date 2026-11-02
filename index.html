@@ -1300,6 +1300,10 @@ function render(){
   // La cabecera leia SOLO el libro live de BSC: decia "sin posiciones abiertas · P&L -0,06"
   // mientras habia una abierta en Solana y el realizado real era -14. Se usa el agregado S.real.
   const _LV = (S.real || (S.book && S.book.live)) || {};
+  // La etiqueta de la cabecera estaba fija en "PAPER · BSC" aunque hubiera dinero real en dos
+  // cadenas. Se deriva del estado: real si hay capital real o alguna posicion real abierta.
+  const _mb = document.getElementById('mode-badge');
+  if (_mb) _mb.textContent = (_LV.capital > 0 || _LV.open > 0) ? 'REAL · BSC + SOL' : 'PAPER · BSC';
   const _lvOpen = _LV.open || 0, _lvRisk = _LV.deployed || 0, _lvReal = _LV.realized || 0;
   $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
     + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · `

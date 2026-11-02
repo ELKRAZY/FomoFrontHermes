@@ -272,8 +272,10 @@ function blobUrls(){
   // ORDEN CAMBIADO 2026-11-02: primero la rama (publish la purga en cada push), y el SHA despues
   // como respaldo. Con el SHA primero, si la API de GitHub devolvia 403 por limite de peticiones
   // el panel se quedaba clavado en el commit de hace 8 minutos aunque el blob nuevo ya estuviera.
-  const out = ['https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc',
-               'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc'];
+  // RAW PRIMERO. Medido 2026-11-02 18:40: jsDelivr servia 1.355.517 bytes y raw 1.359.593 del
+  // MISMO commit: el purge devolvia 200 pero no invalidaba la rama, y el panel vivia 20 min atras.
+  const out = ['https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc',
+               'https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc'];
   if (SHA) out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@' + SHA + '/state.enc');
   return out;
 }

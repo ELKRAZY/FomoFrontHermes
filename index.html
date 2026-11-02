@@ -1367,9 +1367,12 @@ function render(){
   const _sim = _books.filter(x => x.k !== 'live');
   const _best = _sim.reduce((a, b) => (b.v > a.v ? b : a), _sim[0] || { k:'—', v:0, u:0 });
   const _liveRow = _books.find(x => x.k === 'live') || { v: 0, u: 0, n: 0, w: 0 };
-  const totalRealized = _liveRow.v || 0;
+  // Titular = DINERO REAL de las dos cadenas (BSC + Solana). Antes solo miraba el libro live de
+  // BSC, asi que las operaciones reales de Solana no salian en la cifra grande.
+  const _R = S.real || null;
+  const totalRealized = _R ? _R.realized : (_liveRow.v || 0);
   const totalUnval = _liveRow.u || 0;
-  const bestBook = 'live';
+  const bestBook = 'BSC + SOL';
   const paperBest = _best.v || 0, paperBestBook = _best.k;
   // Objetivo y avance del DINERO REAL. El denominador viene de la policy (live_target_eur); si no
   // llega, se dice "—" en vez de inventar una meta.
@@ -1402,7 +1405,7 @@ function render(){
      <div style="height:6px;background:#1f2937;border-radius:4px;margin:5px 0 4px;overflow:hidden">
         <div style="height:100%;width:${Math.max(0,Math.min(100,_pct)).toFixed(1)}%;background:${totalRealized>=0?'#22c55e':'#f43f5e'}"></div></div>
      <div class="s" style="margin-top:2px">capital real
-        <b class="mo" data-k="cash">0</b> <span class="di">congelado · ticket ${esc(S.money.per_position)} €</span></div>
+        <b class="mo" data-k="cash">0</b> <span class="di">· BNB ${n2((_R||{}).bnb_eur,2)} € + SOL ${n2((_R||{}).sol_eur,2)} € · ticket ${esc(S.money.per_position)} €</span></div>
      ${totalUnval ? `<div class="s wa" style="margin-top:4px">Peor caso con las no valorables a cero:
         <b>${n2(totalRealized-totalUnval,2)} €</b></div>` : ''}</div>`;
   h += '</div>';

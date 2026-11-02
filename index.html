@@ -304,10 +304,19 @@ window.setModel = function(k){
 };
 function paintModels(){
   const sm = $('#seg-model');
-  if (sm) sm.innerHTML = MODELS.map(([k, l]) => {
+  if (!sm) return;
+  /* Jerarquia (plan de Argon, punto 2): el dinero real primero y separado; los siete libros de
+     papel detras de un rotulo, no al mismo nivel. Antes el selector mezclaba ocho chips como si
+     fueran la misma clase de cosa. */
+  const chip = ([k, l]) => {
     const label = (k === 'screened') ? gateLabel() : l;   /* nombre real de la puerta */
     return `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${label}</button>`;
-  }).join('');
+  };
+  const _live = MODELS.filter(m => m[0] === 'live');
+  const _paper = MODELS.filter(m => m[0] !== 'live');
+  sm.innerHTML = _live.map(chip).join('')
+    + `<span style="font:9px ui-monospace,monospace;color:#6b7280;align-self:center;padding:2px 5px;border-left:1px solid #374151;margin-left:4px">PAPEL</span>`
+    + _paper.map(chip).join('');
 }
 
 let PERIOD = 'epoch';

@@ -1318,7 +1318,7 @@ function render(){
      marca en rojo. No es cosmetico: es la unica forma de detectar un replay. */
   const EDAD = Math.max(0, (Date.now() - new Date(S.generated_at).getTime()) / 1000);
   const ageEl = $('#age');
-  ageEl.textContent = 'Datos: hace ' + ago(S.generated_at) + (EDAD > 120 ? '  ⚠ DATO VIEJO' : '');
+  ageEl.textContent = 'Datos: hace ' + ago(S.generated_at) + (EDAD > 420 ? '  ⚠ DATO VIEJO' : '')   /* 7 min: el suelo medido del CDN de GitHub; avisar a los 2 min era gritar por algo que no controlamos */;
   ageEl.style.color = EDAD > 120 ? 'var(--bad)' : '';
   LAST_TS = S.generated_at;
   $('#meta').textContent = S.ledger;

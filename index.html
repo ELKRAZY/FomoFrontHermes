@@ -253,7 +253,7 @@ const POLL_MS = 20000;   // 20 s: con 60 s el panel podia ir 2 min por detras de
 const GH_COMMITS = 'https://api.github.com/repos/ELKRAZY/FomoFrontHermes/commits/state';
 let SHA = '', SHA_AT = 0;
 async function currentSha(force){
-  if (!force && SHA && Date.now() - SHA_AT < 90000) return SHA;
+  if (!force && SHA && Date.now() - SHA_AT < 240000) return SHA;
   try {
     const r = await fetch(GH_COMMITS, { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
     if (!r.ok) throw new Error('api ' + r.status);
@@ -263,10 +263,12 @@ async function currentSha(force){
   return SHA;
 }
 function blobUrls(){
-  const out = [];
+  // ORDEN CAMBIADO 2026-11-02: primero la rama (publish la purga en cada push), y el SHA despues
+  // como respaldo. Con el SHA primero, si la API de GitHub devolvia 403 por limite de peticiones
+  // el panel se quedaba clavado en el commit de hace 8 minutos aunque el blob nuevo ya estuviera.
+  const out = ['https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc',
+               'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc'];
   if (SHA) out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@' + SHA + '/state.enc');
-  out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc');
-  out.push('https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc');
   return out;
 }
 

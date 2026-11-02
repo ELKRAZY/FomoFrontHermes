@@ -1235,8 +1235,8 @@ function bookCard(book, S){
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
     + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
     + `<div class="book-metrics">`
-    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'Capital real' : 'Capital sim'}</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
-    + `<div class="bm-item"><div class="bm-lbl">Disponible</div><div class="bm-val" data-k="av-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'En wallet' : 'Capital sim'}</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'Comprable (BNB)' : 'Disponible'}</div><div class="bm-val" data-k="av-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Desplegado</div><div class="bm-val" data-k="de-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Realizado</div><div class="bm-val ${b.realized>0?'ok':b.realized<0?'bad':'di'}">${b.realized>0?'+':''}${n2(b.realized,2)}</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Mark abiertas</div><div class="bm-val ${b.unrealized>0?'ok':b.unrealized<0?'bad':'di'}">${b.unrealized>0?'+':''}${n2(b.unrealized,2)}</div></div>`
@@ -1516,8 +1516,13 @@ function render(){
     const b = (S.book||{})[book];
     if (!b) continue;
     const q = k => $('[data-k="'+k+'-'+book+'"]');
-    if (q('cap')) anim(q('cap'), b.capital, 0, ' €');
-    if (q('av')) anim(q('av'), b.available, 2, ' €');
+    // En el libro live el capital y el disponible son la WALLET medida en cadena, no una resta
+    // sobre el capital de policy: "300 EUR" no existia en ningun sitio, y ademas el bot compra con
+    // BNB, asi que lo desplegable es el BNB menos la reserva de gas (los stablecoins estan ahi pero
+    // la ruta de compra no los usa).
+    const W = (book === 'live' && b.wallet) ? b.wallet : null;
+    if (q('cap')) anim(q('cap'), W && W.total_eur != null ? W.total_eur : b.capital, 2, ' €');
+    if (q('av')) anim(q('av'), W && W.deployable_eur != null ? W.deployable_eur : b.available, 2, ' €');
     if (q('de')) anim(q('de'), b.deployed, 2, ' €');
     if (q('fe')) anim(q('fe'), b.fees, 2, ' €');
   }

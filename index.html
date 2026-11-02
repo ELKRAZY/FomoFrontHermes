@@ -1639,11 +1639,16 @@ async function load(force = false){
        cache con ?t= mientras la pestaña esta VISIBLE (que es cuando el dueño mira), y se deja el
        camino barato con ETag cuando esta oculta para no gastar datos del movil. */
     const vis = document.visibilityState === 'visible';
+    // Si el dato que tenemos ya tiene mas de 2 minutos, se FUERZA la descarga: un 304 contra una
+    // copia vieja del CDN deja el panel congelado para siempre (paso: 19 min con check cada 1 s).
+    let _edad = 0;
+    if (STATE && STATE.generated_at) _edad = (Date.now() - new Date(STATE.generated_at).getTime()) / 1000;
+    const _stale = _edad > 120;
     let env = null, err = null;
     await currentSha(false);
     const urls = blobUrls();
     for (let i = 0; i < urls.length && !env; i++){
-      try { const e = await fetchBlob(force || vis, i, urls); if (e) env = e; }
+      try { const e = await fetchBlob(force || vis || _stale, i, urls); if (e) env = e; }
       catch (x){ err = x; }
     }
     if (!env) throw (err || new Error('sin respuesta de ningun CDN'));

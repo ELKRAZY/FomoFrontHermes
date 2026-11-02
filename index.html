@@ -1033,7 +1033,9 @@ function renderPosDrawer(p){
   const m = p.marks || [];
   /* Contrato del token: sin esto, para comprobarlo fuera del panel habia que copiarlo de otro sitio.
      Se muestra corto y se copia entero con un toque; el enlace va a BscScan. */
-  const addr = (p.address || '').toLowerCase();
+  // En Solana la direccion distingue mayusculas: pasarla a minusculas da un mint que no existe.
+  const _solAddr = p.cohort && p.cohort.indexOf('sol') === 0;
+  const addr = _solAddr ? (p.address || '') : (p.address || '').toLowerCase();
   const addrLine = addr
     ? `<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px;flex-wrap:wrap">
          <span style="font:10.5px ui-monospace,monospace;color:#9ca3af">${esc(addr.slice(0, 10))}…${esc(addr.slice(-6))}</span>

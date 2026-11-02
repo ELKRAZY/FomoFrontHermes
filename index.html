@@ -237,7 +237,7 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
 <script>
 const BLOB = "https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc";
 const ITER_FALLBACK = 600000;
-const POLL_MS = 20000;   // 20 s: con 60 s el panel podia ir 2 min por detras de la cadena
+const POLL_MS = 5000;    // 5 s: sin cupo de API se puede sondear fino
 /* Dos CDNs, no uno. Medido el 2026-10-26: raw.githubusercontent.com ignora la query (?t=) al
    cachear y sirve el blob con cache-control max-age=300 — hasta 5 minutos de retraso aunque el
    fichero ya sea nuevo. jsDelivr se purga con el push y servia el blob al dia (age 0) mientras

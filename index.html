@@ -1064,7 +1064,7 @@ function renderPosDrawer(p){
   const cab = `<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
     <span><b style="color:#e5e7eb">${esc(p.symbol || '')}</b> · ${p.state === 'abierta' ? 'abierta' : 'cerrada'}
       ${p.closed ? '· ' + esc(tsLocal(p.closed)) : ''}</span>
-    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine + ageLine + extLine;
+    <span>coste ${n2(p.cost, 2)} € → valor ${p.value === null ? 'sin precio' : n2(p.value, 2) + ' €'}</span></div>` + addrLine + txLine + ageLine + extLine;
   if (m.length < 3){
     /* P5 de Argon: decir la CAUSA, no "sin histórico" (que parece un fallo del panel). */
     const inicio = Date.parse('2026-10-19T00:00:00Z');
@@ -1195,7 +1195,7 @@ function bookCard(book, S){
   const openAll = P.filter(p => p.state === 'abierta').length;
   let h = `<div class="p book-card ${isScr?'':'control-card'}">`
     + `<div class="book-hdr"><div>`
-    + `<div class="book-title">${isScr ? '🎯 ESTRATEGIA · ' + gateLabel()
+    + `<div class="book-title">${isLive ? '' : '📄 PAPEL · '}${isScr ? '🎯 ESTRATEGIA · ' + gateLabel()
         : isTrail ? '🪂 TRAILING · deja correr'
         : isFork ? '🧬 FORK CONTROL · cohorte'
         : isAlt ? '🧯 CONTROL SOLVENCIA · 24h o pool<100x valor'

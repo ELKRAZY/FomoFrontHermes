@@ -1338,6 +1338,10 @@ function render(){
   const totalUnval = _liveRow.u || 0;
   const bestBook = 'live';
   const paperBest = _best.v || 0, paperBestBook = _best.k;
+  // Objetivo y avance del DINERO REAL. El denominador viene de la policy (live_target_eur); si no
+  // llega, se dice "—" en vez de inventar una meta.
+  const _tgt = Number((S.book && S.book.live && S.book.live.target_eur) || 0);
+  const _pct = _tgt > 0 ? (100 * totalRealized / _tgt) : 0;
   const rows = (S.integrity.tables || []).reduce((a,t) => a + (t.rows || 0), 0);
 
   let h = '<div class="g-kpi">';
@@ -1349,10 +1353,14 @@ function render(){
      <div class="big" style="margin-top:6px">${n2(g.all_legs)}<span class="di" style="font-size:13px"> / ${n2(g.screened)} cribados</span></div>
      <div class="s" style="margin-top:4px">recolectados <b class="mo" data-k="col">0</b> · reales <b>${n2(g.real_attempts)}/5</b></div></div>`;
   h += `<div class="p"><div style="display:flex;justify-content:space-between;align-items:baseline">
-     <span class="s">P&amp;L REALIZADO · ${PERIOD === '24h' ? 'HOY' : PERIOD === '7d' ? '7 DÍAS' : PERIOD === '30d' ? '30 DÍAS' : 'ÉPOCA'} · mayor: ${esc(bestBook)}</span>
+     <span class="s">P&amp;L REALIZADO · ${PERIOD === '24h' ? 'HOY' : PERIOD === '7d' ? '7 DÍAS' : PERIOD === '30d' ? '30 DÍAS' : 'ÉPOCA'} · libro live</span>
      <span class="pill ${totalRealized>0?'ok':(totalRealized<0?'bad':'wa')}" title="cifra de DINERO REAL. Referencia de papel (maximo entre libros espejo, sin sumar): ${n2(paperBest,2)} EUR en ${paperBestBook}">${totalRealized>0?'REAL ▲':(totalRealized<0?'REAL ▼':'REAL =')}</span></div>
      <div class="big ${totalRealized>0?'ok':totalRealized<0?'bad':'di'}" style="margin-top:6px">${totalRealized>0?'+':''}${n2(totalRealized,2)} €</div>
-     <div class="s" style="margin-top:4px">Criterio: <b>+1% a +2%/mes</b> · capital real
+     <div class="s" style="margin-top:4px">Objetivo <b>${n2(_tgt)} €</b> de dinero real ·
+        <b class="${_pct>=100?'ok':''}">${n2(_pct,1)} %</b> <span class="di">· faltan ${n2(Math.max(0,_tgt-totalRealized),2)} €</span></div>
+     <div style="height:6px;background:#1f2937;border-radius:4px;margin:5px 0 4px;overflow:hidden">
+        <div style="height:100%;width:${Math.max(0,Math.min(100,_pct)).toFixed(1)}%;background:${totalRealized>=0?'#22c55e':'#f43f5e'}"></div></div>
+     <div class="s" style="margin-top:2px">capital real
         <b class="mo" data-k="cash">0</b> <span class="di">congelado · ticket ${esc(S.money.per_position)} €</span></div>
      ${totalUnval ? `<div class="s wa" style="margin-top:4px">Peor caso con las no valorables a cero:
         <b>${n2(totalRealized-totalUnval,2)} €</b></div>` : ''}</div>`;

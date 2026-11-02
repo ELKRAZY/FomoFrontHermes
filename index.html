@@ -1034,6 +1034,13 @@ function renderPosDrawer(p){
             onclick="event.stopPropagation()" style="color:#93c5fd;font-size:10px;text-decoration:none">bscscan ↗</a>
        </div>`
     : `<div style="margin:0 0 6px;font-size:10px;color:#6b7280">contrato no registrado en la posición</div>`;
+  // En el libro live el fill tiene hash de transaccion: sin el enlace, comprobar que esa compra o
+  // venta existio obliga a buscarla a mano en BscScan.
+  const txLine = (p.cohort === 'live' && p.tx && p.tx !== '0x0')
+    ? `<div style="margin:0 0 6px"><a href="https://bscscan.com/tx/${esc(p.tx)}" target="_blank"
+         rel="noopener" onclick="event.stopPropagation()"
+         style="color:#93c5fd;font-size:10px;text-decoration:none">tx ${esc(String(p.tx).slice(0,10))}…${esc(String(p.tx).slice(-6))} ↗</a></div>`
+    : '';
   /* Referencia externa: si el pool no contesta pero DexScreener/GeckoTerminal si cotizan el token,
      se dice cuanto dicen y de donde, SIN convertirlo en valor. No entra en P&L: no trae reservas
      ni permite calcular el impacto de nuestra venta. */

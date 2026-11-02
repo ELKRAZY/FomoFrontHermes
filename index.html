@@ -1268,6 +1268,7 @@ function bookCard(book, S){
   h += `<div class="fb-row"><div class="fb" id="fb-${book}"></div>
     <input class="search-in" type="search" placeholder="Filtrar token/motivo…"
       value="${esc(PSEARCH[book])}" oninput="setBookSearch('${book}', this.value)"></div>
+    ${isLive ? `<div class="s" data-k="wsplit" style="margin-top:4px;font-size:10.5px"></div>` : ''}
     <div id="pos-box-${book}"></div>`;
   return h + `</div>`;
 }
@@ -1521,6 +1522,13 @@ function render(){
     // BNB, asi que lo desplegable es el BNB menos la reserva de gas (los stablecoins estan ahi pero
     // la ruta de compra no los usa).
     const W = (book === 'live' && b.wallet) ? b.wallet : null;
+    // Reparto por activo: el bot paga con el activo del par, asi que BNB y USDT son ambos capital
+    // operativo, pero por separado: uno no sirve para un par del otro.
+    const wSplit = $('[data-k="wsplit"]');
+    if (wSplit && W) {
+      wSplit.innerHTML = `BNB ${n2(W.bnb_eur,2)} € · USDT ${n2(W.stable_eur,2)} € `
+        + `<span class="di">· comprable BNB ${n2(W.deployable_bnb_eur,2)} € · USDT ${n2(W.stable_eur,2)} €</span>`;
+    }
     if (q('cap')) anim(q('cap'), W && W.total_eur != null ? W.total_eur : b.capital, 2, ' €');
     if (q('av')) anim(q('av'), W && W.deployable_eur != null ? W.deployable_eur : b.available, 2, ' €');
     if (q('de')) anim(q('de'), b.deployed, 2, ' €');

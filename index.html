@@ -274,7 +274,10 @@ function blobUrls(){
   // el panel se quedaba clavado en el commit de hace 8 minutos aunque el blob nuevo ya estuviera.
   // RAW PRIMERO. Medido 2026-11-02 18:40: jsDelivr servia 1.355.517 bytes y raw 1.359.593 del
   // MISMO commit: el purge devolvia 200 pero no invalidaba la rama, y el panel vivia 20 min atras.
-  const out = ['https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc',
+  // PRIMERO el edge propio (Deno Deploy): responde no-store y sin caché intermedia. Verificado
+  // 2026-11-02 19:0x: mismo tamano y sha256 que el origen, cache-control no-store.
+  const out = ['https://fomo-state.elkrazy.deno.net/state.enc',
+               'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc',
                'https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc'];
   if (SHA) out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@' + SHA + '/state.enc');
   return out;

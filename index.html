@@ -1297,7 +1297,9 @@ function render(){
   if (!S) return;
   // El pie decia "papel, sin dinero real" cuando ya hay ejecucion real: mentia en la primera
   // linea que lee el owner. Ahora se deriva del libro live, no de una constante.
-  const _LV = (S.book && S.book.live) || {};
+  // La cabecera leia SOLO el libro live de BSC: decia "sin posiciones abiertas · P&L -0,06"
+  // mientras habia una abierta en Solana y el realizado real era -14. Se usa el agregado S.real.
+  const _LV = (S.real || (S.book && S.book.live)) || {};
   const _lvOpen = _LV.open || 0, _lvRisk = _LV.deployed || 0, _lvReal = _LV.realized || 0;
   $('#sub').textContent = `Época ${(S.epoch && S.epoch.label) || 'activa'} desde `
     + `${((S.epoch && S.epoch.start) || '').slice(0,10)} · `

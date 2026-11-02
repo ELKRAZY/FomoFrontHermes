@@ -1305,6 +1305,19 @@ function bookCard(book, S){
 }
 
 function render(){
+  // El panel se repinta cada 5 s y el scroll se perdia en cada vuelta. Se guarda la posicion de
+  // la ventana y la de cada contenedor con id, se repinta y se devuelve todo a su sitio en el
+  // siguiente frame (cuando el DOM ya tiene las alturas nuevas).
+  const _y = window.scrollY;
+  const _sc = Array.from(document.querySelectorAll('[id]')).map(e => [e.id, e.scrollTop]);
+  renderCore();
+  requestAnimationFrame(() => {
+    _sc.forEach(([id, top]) => { const el = document.getElementById(id); if (el && top) el.scrollTop = top; });
+    if (_y) window.scrollTo(0, _y);
+  });
+}
+
+function renderCore(){
   const S = STATE;
   if (!S) return;
   // El pie decia "papel, sin dinero real" cuando ya hay ejecucion real: mentia en la primera

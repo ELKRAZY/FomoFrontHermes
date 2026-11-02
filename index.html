@@ -252,12 +252,21 @@ const POLL_MS = 20000;   // 20 s: con 60 s el panel podia ir 2 min por detras de
    El SHA se consulta a la API (60 peticiones/hora sin autenticar) cada 90 s -> 40/h, con margen. */
 const GH_COMMITS = 'https://api.github.com/repos/ELKRAZY/FomoFrontHermes/commits/state';
 let SHA = '', SHA_AT = 0;
+let SHA_TRIED = 0;
 async function currentSha(force){
-  // SIN API DE GITHUB. Antes se pedia el SHA del ultimo commit para pinchar el fichero a ese
-  // commit; sin token la API limita a 60 peticiones/hora por IP y el panel acababa enseñando el
-  // error "API rate limit exceeded" en vez de datos, o clavado en un commit de hace 20 minutos.
-  // publish purgea jsDelivr en cada push, asi que la rama ya sirve lo nuevo.
-  return null;
+  // Capa de seguridad RESTAURADA pero con disciplina de cupo: la API de GitHub sin token da 60
+  // peticiones/hora por IP, asi que se consulta COMO MUCHO una vez por hora y nunca en cada
+  // sondeo. Si falla, el panel sigue leyendo la rama (que publish purga en cada push).
+  if (SHA && Date.now() - SHA_AT < 3600000) return SHA;
+  if (Date.now() - SHA_TRIED < 3600000) return SHA;
+  SHA_TRIED = Date.now();
+  try {
+    const r = await fetch(GH_COMMITS, { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
+    if (!r.ok) throw new Error('api ' + r.status);
+    const t = (await r.text()).trim();
+    if (/^[0-9a-f]{40}$/.test(t)) { SHA = t; SHA_AT = Date.now(); }
+  } catch (e) { /* sin SHA: se usa la rama */ }
+  return SHA;
 }
 function blobUrls(){
   // ORDEN CAMBIADO 2026-11-02: primero la rama (publish la purga en cada push), y el SHA despues

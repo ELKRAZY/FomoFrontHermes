@@ -1328,9 +1328,22 @@ function render(){
   const g = S.gate || { screened:0, target:100, collected:0, real_attempts:0 };
   const pctGate = Math.min(100, Math.round(100 * g.screened / (g.target || 100)));
   const BK = S.book || {};
-  // Respaldo de nombres de Solana: si el item no trae symbol, se busca por direccion.
-  if (S.sol_names) for (const k in BK) for (const p of ((BK[k] || {}).positions || []))
-    if (!p.symbol && p.address && S.sol_names[p.address]) p.symbol = S.sol_names[p.address];
+  // Respaldo de nombres de Solana en TODO el estado: no solo en las posiciones de los libros,
+  // tambien en candidatas, decisiones y los rankings. Si un objeto tiene direccion y no tiene
+  // simbolo, se rellena desde el mapa. Sin esto, cualquier lista construida por otra rama seguia
+  // enseñando el mint abreviado.
+  if (S.sol_names) {
+    const _m = S.sol_names;
+    const _walk = (o) => {
+      if (!o || typeof o !== 'object') return;
+      if (o.symbol === undefined || o.symbol === null || o.symbol === '') {
+        const a = o.address || o.token || o.mint || o.token_address;
+        if (a && _m[a]) o.symbol = _m[a];
+      }
+      for (const k in o) if (typeof o[k] === 'object') _walk(o[k]);
+    };
+    _walk(S);
+  }
   // KPI de epoca = EL MAYOR REALIZADO ENTRE ESTRATEGIAS, no la suma (owner, 2026-10-28).
   // Sumar screened+control contaba dos poblaciones distintas como si fueran una cuenta; y ademas
   // los libros espejo (trail, fork) repiten compras de control, asi que sumar cualquiera de ellos

@@ -470,7 +470,9 @@ async function fetchBlob(force = false, which = 0, urls = null){
   const BL = urls || blobUrls();
   if (ETAG && !force && which > 0) headers['If-None-Match'] = ETAG;   /* el @sha nunca da 304 */
   const url = BL[which] || BL[0];
-  const r = await fetch(url + (force ? '?t=' + Date.now() : ''), { cache:'no-cache', headers });
+  // no-store (no no-cache): jsDelivr manda max-age=604800 y el navegador puede servir del disco
+  // sin revalidar. Con no-store la respuesta nunca se guarda y el dato es el del edge.
+  const r = await fetch(url + (force ? '?t=' + Date.now() : ''), { cache:'no-store', headers });
   LAST_CHECK = new Date();
   if (r.status === 304) return null;
   if (!r.ok) throw new Error('HTTP ' + r.status);

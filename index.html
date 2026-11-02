@@ -1195,7 +1195,7 @@ function svgLocal(el, ev){
 function bookCard(book, S){
   const b = (S.book || {})[book];
   if (!b) return '';
-  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw', isLive = book === 'live';
+  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw', isLive = book === 'live', isSol = book === 'sol', isSolP = book === 'solpaper';
   const P = b.positions || [];
   let nWin = 0, nLoss = 0, nOpen = 0;
   for (const p of P){ const k = PF_BUCKET(p); if (k==='win') nWin++; else if (k==='loss') nLoss++; else nOpen++; }
@@ -1204,13 +1204,15 @@ function bookCard(book, S){
   const openAll = P.filter(p => p.state === 'abierta').length;
   let h = `<div class="p book-card ${isScr?'':'control-card'}">`
     + `<div class="book-hdr"><div>`
-    + `<div class="book-title">${isLive ? '' : '📄 PAPEL · '}${isScr ? '🎯 ESTRATEGIA · ' + gateLabel()
+    + `<div class="book-title">${(isLive || isSol) ? '' : '📄 PAPEL · '}${isScr ? '🎯 ESTRATEGIA · ' + gateLabel()
         : isTrail ? '🪂 TRAILING · deja correr'
         : isFork ? '🧬 FORK CONTROL · cohorte'
         : isAlt ? '🧯 CONTROL SOLVENCIA · 24h o pool<100x valor'
         : isNm ? '💸 SIN DINERO · 24h o dobla sin pool'
         : isCw ? '👛 CONTROL · gemelo wallet'
         : isLive ? '💶 LIVE'
+        : isSol ? '◎ SOL · dinero real'
+        : isSolP ? '◎ SOL · gemelo papel'
         : '🧪 CONTROL · cortes gratis'}</div>`
     + (() => {
         const sr = (S.book[book] || {}).since_rule;
@@ -1221,7 +1223,11 @@ function bookCard(book, S){
           <b style="color:${v > 0 ? '#22c55e' : v < 0 ? '#f43f5e' : '#9ca3af'}">${v > 0 ? '+' : ''}${n2(v, 2)} €</b>
           · ${sr.excluded} anteriores quedan FUERA de esta cifra (siguen en el registro)</div>`;
       })()
-    + `<div class="book-sub">${isLive
+    + `<div class="book-sub">${isSol
+        ? 'Jupiter · ticket 5 € · salida 8 h o devolver 25 % desde el pico · puerta: mint, freeze, transfer hooks, liquidez'
+        : isSolP
+        ? 'misma compra y mismo instante que ◎ SOL, pero con reloj de 20 h y sin firmar: sirve para comparar horizontes'
+        : isLive
         ? 'ejecucion REAL on-chain · ticket 5 € · salida 24 h · tope 22 posiciones · compra a los 90 min de la decision'
         : isScr
         ? screenedHint()

@@ -287,7 +287,7 @@ let CAND_FILTER = 'all';
    seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
-const MODELS = [['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
+const MODELS = [['live', '💶 LIVE'], ['sol', '◎ SOL real'], ['solpaper', '◎ SOL papel 20h'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
@@ -312,8 +312,8 @@ function paintModels(){
     const label = (k === 'screened') ? gateLabel() : l;   /* nombre real de la puerta */
     return `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${label}</button>`;
   };
-  const _live = MODELS.filter(m => m[0] === 'live');
-  const _paper = MODELS.filter(m => m[0] !== 'live');
+  const _live = MODELS.filter(m => m[0] === 'live' || m[0] === 'sol');
+  const _paper = MODELS.filter(m => m[0] !== 'live' && m[0] !== 'sol');
   sm.innerHTML = _live.map(chip).join('')
     + `<span style="font:9px ui-monospace,monospace;color:#6b7280;align-self:center;padding:2px 5px;border-left:1px solid #374151;margin-left:4px">PAPEL</span>`
     + _paper.map(chip).join('');
@@ -1329,7 +1329,7 @@ function render(){
   // El KPI sigue al selector de periodo: con Hoy/7d/30d usa el resultado de esa ventana, no el
   // total de la epoca. Y entran TODOS los libros (faltaban alt y nomoney).
   const _pk = (PERIOD && PERIOD !== 'epoch') ? PERIOD : 'epoch';
-  const _books = ['live','control','ctrlw','screened','trail','fork','alt','nomoney']
+  const _books = ['live','sol','control','ctrlw','screened','trail','fork','alt','nomoney','solpaper']
     .map(k => {
       const b = BK[k] || {};
       const per = (b.periods || {})[_pk] || {};

@@ -1108,7 +1108,7 @@ function renderPosDrawer(p){
   window.__posQuote = window.__posQuote || {}; window.__posQuote[p.position] = p.quote || 'BNB';
   const ult = m[m.length - 1];
   const resumen = `<div data-role="pos-readout" style="font:10.5px ui-monospace,monospace;color:#9ca3af;margin:4px 0 3px">
-    ${m.length} marcas · precio ${ult[3] === null ? '—' : n2(ult[3] / 100, 2) + ' €/M'} · valor ${n2(ult[1] / 100, 2)} € · pool ${n2(ult[2] / 100, 2)} ${esc(p.quote || 'BNB')} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
+    ${m.length} marcas · precio ${ult[3] === null ? '—' : n2(ult[3] / 100, 2) + ' €/M'} · valor ${n2(ult[1] / 100, 2)} € · pool ${ult[2] ? n2(ult[2] / 100, 2) + ' ' + esc(p.quote || 'BNB') : '— (sin reservas)'} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
     · <span style="color:#a855f7">coste ${n2(p.cost, 2)} €</span></div>`;
   return `<div class="pos-drawer">${cab}${resumen}
     <svg data-chart="pos" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
@@ -1241,8 +1241,8 @@ function bookCard(book, S){
         : 'sin puerta de contrato: mide la tasa base del feed BSC'}</div></div>`
     + `<span class="pill ${b.open>0?'wa':'di'}">${b.open} abiertas · ${b.closed} cerradas</span></div>`
     + `<div class="book-metrics">`
-    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'En wallet' : 'Capital sim'}</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
-    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'Comprable (BNB)' : 'Disponible'}</div><div class="bm-val" data-k="av-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">${(isLive || isSol) ? 'En wallet' : 'Capital sim'}</div><div class="bm-val" data-k="cap-${book}">0</div></div>`
+    + `<div class="bm-item"><div class="bm-lbl">${isLive ? 'Comprable (BNB)' : isSol ? 'Comprable (SOL)' : 'Disponible'}</div><div class="bm-val" data-k="av-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Desplegado</div><div class="bm-val" data-k="de-${book}">0</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Realizado</div><div class="bm-val ${b.realized>0?'ok':b.realized<0?'bad':'di'}">${b.realized>0?'+':''}${n2(b.realized,2)}</div></div>`
     + `<div class="bm-item"><div class="bm-lbl">Mark abiertas</div><div class="bm-val ${b.unrealized>0?'ok':b.unrealized<0?'bad':'di'}">${b.unrealized>0?'+':''}${n2(b.unrealized,2)}</div></div>`
@@ -1527,16 +1527,16 @@ function render(){
     // sobre el capital de policy: "300 EUR" no existia en ningun sitio, y ademas el bot compra con
     // BNB, asi que lo desplegable es el BNB menos la reserva de gas (los stablecoins estan ahi pero
     // la ruta de compra no los usa).
-    const W = (book === 'live' && b.wallet) ? b.wallet : null;
+    const W = ((book === 'live' || book === 'sol') && b.wallet) ? b.wallet : null;
     // Reparto por activo: el bot paga con el activo del par, asi que BNB y USDT son ambos capital
     // operativo, pero por separado: uno no sirve para un par del otro.
     const wSplit = $('[data-k="wsplit"]');
-    if (wSplit && W) {
+    if (wSplit && W && book === 'live') {
       wSplit.innerHTML = `BNB ${n2(W.bnb_eur,2)} € · USDT ${n2(W.stable_eur,2)} € `
         + `<span class="di">· comprable BNB ${n2(W.deployable_bnb_eur,2)} € · USDT ${n2(W.stable_eur,2)} €</span>`;
     }
-    if (q('cap')) anim(q('cap'), W && W.total_eur != null ? W.total_eur : b.capital, 2, ' €');
-    if (q('av')) anim(q('av'), W && W.deployable_eur != null ? W.deployable_eur : b.available, 2, ' €');
+    if (q('cap')) anim(q('cap'), W ? (W.total_eur != null ? W.total_eur : (W.sol_eur ?? b.capital)) : b.capital, 2, ' €');
+    if (q('av')) anim(q('av'), W ? (W.deployable_eur != null ? W.deployable_eur : (W.sol_eur ?? b.available)) : b.available, 2, ' €');
     if (q('de')) anim(q('de'), b.deployed, 2, ' €');
     if (q('fe')) anim(q('fe'), b.fees, 2, ' €');
   }

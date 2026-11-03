@@ -302,7 +302,7 @@ let CAND_FILTER = 'all';
    seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
-const MODELS = [['live', '💶 LIVE'], ['sol', '◎ SOL real'], ['solpaper', '◎ SOL papel 20h'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper6', '◎ SOL 6-12h'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
+const MODELS = [['live', '💶 LIVE'], ['sol', '◎ SOL real'], ['solpaper', '◎ SOL papel 20h'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper6', '◎ SOL 6-12h'], ['solgen', '🧪 GEN · 2h'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
@@ -1401,7 +1401,7 @@ function renderCore(){
   // El KPI sigue al selector de periodo: con Hoy/7d/30d usa el resultado de esa ventana, no el
   // total de la epoca. Y entran TODOS los libros (faltaban alt y nomoney).
   const _pk = (PERIOD && PERIOD !== 'epoch') ? PERIOD : 'epoch';
-  const _books = ['live','sol','control','ctrlw','screened','trail','fork','alt','nomoney','solpaper','solpaper8','solpaper3','solpaper6']
+  const _books = ['live','sol','control','ctrlw','screened','trail','fork','alt','nomoney','solpaper','solpaper8','solpaper3','solpaper6','solgen']
     .map(k => {
       const b = BK[k] || {};
       const per = (b.periods || {})[_pk] || {};

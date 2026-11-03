@@ -278,7 +278,7 @@ function blobUrls(){
   // 2026-11-02 19:0x: mismo tamano y sha256 que el origen, cache-control no-store.
   // Deno SUSPENDIDO por USAGE_EXCEEDED (1,3 MB/minuto agota la capa gratuita): fuera de la cadena
   // hasta que el blob adelgace. GitHub queda como fuente unica.
-  const out = [
+  const out = ['https://fomo-vps.tail019cf2.ts.net/state.enc',   // tunel propio (RAM del VPS)
                'https://raw.githubusercontent.com/ELKRAZY/FomoFrontHermes/state/state.enc',
                'https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@state/state.enc'];
   if (SHA) out.push('https://cdn.jsdelivr.net/gh/ELKRAZY/FomoFrontHermes@' + SHA + '/state.enc');

@@ -1756,14 +1756,27 @@ document.addEventListener('click', (ev) => {
   const pid = svg.getAttribute('data-pid');
   const S = (window.__posSeries || {})[pid];
   if (!S || !S.m || !S.m.length) return;
-  const r = svg.getBoundingClientRect();
-  const x = (ev.clientX - r.left) * (S.W / r.width);
+  // Coordenadas SVG reales (getScreenCTM): con getBoundingClientRect el toque se desviaba en
+  // movil cuando el SVG se reescala o lleva margenes, y caia en la marca equivocada.
+  const pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  const ctm = svg.getScreenCTM();
+  const loc = ctm ? pt.matrixTransform(ctm.inverse()) : { x: 0 };
+  const x = loc.x;
   const t = Math.max(0, Math.min(S.tMax, ((x - S.L) / S.PW) * S.tMax));
   let best = S.m[0];
   for (const m of S.m) if (Math.abs(m[0] - t) < Math.abs(best[0] - t)) best = m;
   const d = new Date(best[0] * 1000);
   const hh = String(d.getUTCHours()).padStart(2, '0');
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  // Punto y linea en el sitio elegido: sin referencia visual el dedo no sabe donde ha caido.
+  let g = svg.querySelector('g[data-role="pick"]');
+  if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('data-role', 'pick'); svg.appendChild(g); }
+  const px = S.L + S.PW * (best[0] / S.tMax);
+  g.innerHTML = `<line x1="${px.toFixed(1)}" y1="8" x2="${px.toFixed(1)}" y2="106"
+     stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2"/>
+     <circle cx="${px.toFixed(1)}" cy="106" r="3" fill="#fbbf24"/>`;
   const out = svg.parentElement.querySelector('[data-role="pos-readout"]');
   if (out) {
     const base = out.getAttribute('data-base') || out.textContent.split(' · 🕒')[0];

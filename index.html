@@ -1324,7 +1324,11 @@ function render(){
   // menos de 45 s, no se toca el DOM (solo se actualiza el reloj de "datos").
   try {
     const _S = STATE || {};
-    const _sig = Object.keys(_S.book || {}).map(k => {
+    const _ui = (typeof MODEL !== 'undefined' ? MODEL : '') + '|' +
+                (typeof PERIOD !== 'undefined' ? PERIOD : '') + '|' +
+                JSON.stringify(typeof PFILTER !== 'undefined' ? PFILTER : {}) + '|' +
+                (typeof POS_SORT !== 'undefined' ? POS_SORT : '');
+    const _sig = _ui + Object.keys(_S.book || {}).map(k => {
       const b = _S.book[k] || {};
       return k + (b.open || 0) + (b.closed || 0) + Math.round((b.realized || 0) * 100) +
              ((b.positions || []).length);

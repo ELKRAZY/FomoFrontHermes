@@ -616,7 +616,7 @@ function renderBookPositions(book, animateBox = false){
       h += `<tr class="pos-row${abierta ? ' is-open' : ''}" onclick="togglePos('${p.position}')"
              title="coste ${n2(p.cost, 2)} € · ${esc(p.venue || '')}${p.val_src ? ' · ' + esc(p.val_src) : ''}">`
         +  `<td><div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">${stPill}`
-        +  `<b class="mo" style="font-size:11.5px">${esc(sym)}</b></div>${subTime}</td>`
+        +  `<b class="mo" style="font-size:11.5px">${esc((STATE && STATE.sol_names && STATE.sol_names[p.address]) || sym)}</b></div>${subTime}</td>`
         +  `<td class="num">${p.value === null ? '<span class="wa" title="Sin precio de salida medible">s/p</span>' : n2(p.value, 2)}</td>`
         +  `<td class="num ${pl > 0 ? 'ok' : pl < 0 ? 'bad' : 'di'}">${pl === null ? '—' : (pl > 0 ? '+' : '') + n2(pl, 2)}`
         +  (p.ret !== null && p.ret !== undefined

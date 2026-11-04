@@ -1251,7 +1251,14 @@ function bookCard(book, S){
         : isCw ? '👛 CONTROL · gemelo wallet'
         : isLive ? '💶 LIVE'
         : isSol ? '◎ SOL · dinero real'
-        : isSolP ? '◎ SOL · gemelo papel'
+        : book === 'solpaper' ? '📄 SOL 20h · control'
+        : book === 'solpaper8' ? '📄 SOL 8h · control'
+        : book === 'solpaper8f' ? '📄 SOL 8h · filtro'
+        : book === 'solpaper8x' ? '📄 SOL 8h · filtro + doble'
+        : book === 'solpaper3' ? '📄 SOL · 3 toques'
+        : book === 'solpaper6' ? '📄 SOL 6-24h'
+        : book === 'solgen' ? '📄 GEN · itera 2h'
+        : isSolP ? '📄 SOL · papel'
         : '🧪 CONTROL · cortes gratis'}</div>`
     + (() => {
         const sr = (S.book[book] || {}).since_rule;

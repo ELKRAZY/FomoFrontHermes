@@ -1766,9 +1766,18 @@ document.addEventListener('click', (ev) => {
   const t = Math.max(0, Math.min(S.tMax, ((x - S.L) / S.PW) * S.tMax));
   let best = S.m[0];
   for (const m of S.m) if (Math.abs(m[0] - t) < Math.abs(best[0] - t)) best = m;
-  const d = new Date(best[0] * 1000);
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  // Si la marca elegida trae una epoca invalida (0 o vacia), se usa la ultima valida: antes
+  // eso pintaba 1970, que es lo que se veia al tocar una zona sin dato.
+  let ep = Number(best[0]) || 0;
+  if (ep < 1e9) ep = Number(S.m[S.m.length - 1][0]) || 0;
+  if (ep < 1e9) return;
+  const d = new Date(ep * 1000);
+  // Hora LOCAL del dispositivo (Europa/Madrid en tu caso): el panel enseña lo que ves en el reloj,
+  // no UTC. Se mantiene el sufijo para que no haya duda de qué huso es.
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
   // Punto y linea en el sitio elegido: sin referencia visual el dedo no sabe donde ha caido.
   let g = svg.querySelector('g[data-role="pick"]');
   if (!g) { g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -1781,7 +1790,8 @@ document.addEventListener('click', (ev) => {
   if (out) {
     const base = out.getAttribute('data-base') || out.textContent.split(' · 🕒')[0];
     out.setAttribute('data-base', base);
-    out.textContent = base + ` · 🕒 ${d.toISOString().slice(0,10)} ${hh}:${mm} UTC`;
+    const idx = S.m.indexOf(best);
+    out.textContent = base + ` · 🕒 ${dd}/${mo} ${hh}:${mm} (${idx + 1}/${S.m.length})`;
   }
 });
 </script>

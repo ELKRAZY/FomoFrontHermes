@@ -1138,7 +1138,7 @@ function renderPosDrawer(p){
     ${m.length} marcas · precio ${ult[3] === null ? '—' : n2(ult[3] / 100, 2) + ' €/M'} · valor ${n2(ult[1] / 100, 2)} € · pool ${ult[2] ? n2(ult[2] / 100, 2) + ' ' + esc(p.quote || 'BNB') : '— (sin reservas)'} · pico ${n2(qMax / 100, 2)} ${esc(p.quote || 'BNB')}
     · <span style="color:#a855f7">coste ${n2(p.cost, 2)} €</span></div>`;
   return `<div class="pos-drawer">${cab}${resumen}
-    <svg data-chart="pos" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
+    <svg data-chart="pos" data-pid="${esc(p.position)}" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;touch-action:pan-y;user-select:none"
          onpointerdown="window.__posTap && window.__posTap(event, this, '${esc(p.position)}')">
       <path d="${area}" fill="#60a5fa" fill-opacity="0.14"/>
       <!-- el borde de la liquidez: sin el, un pool que no se mueve queda como un bloque azul y no
@@ -1746,6 +1746,30 @@ window.addEventListener('focus', () => load(true));
 window.addEventListener('pageshow', (e) => { if (e.persisted) load(true); });   // force: salta la cache del CDN en cada sondeo
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') load(true);
+});
+
+/* Al tocar el grafico de una posicion, decir tambien CUANDO fue esa marca. Antes solo daba el
+   valor; sin la hora no se puede saber si el pico fue hace 5 minutos o hace 4 horas. */
+document.addEventListener('click', (ev) => {
+  const svg = ev.target.closest && ev.target.closest('svg[data-chart="pos"]');
+  if (!svg) return;
+  const pid = svg.getAttribute('data-pid');
+  const S = (window.__posSeries || {})[pid];
+  if (!S || !S.m || !S.m.length) return;
+  const r = svg.getBoundingClientRect();
+  const x = (ev.clientX - r.left) * (S.W / r.width);
+  const t = Math.max(0, Math.min(S.tMax, ((x - S.L) / S.PW) * S.tMax));
+  let best = S.m[0];
+  for (const m of S.m) if (Math.abs(m[0] - t) < Math.abs(best[0] - t)) best = m;
+  const d = new Date(best[0] * 1000);
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  const out = svg.parentElement.querySelector('[data-role="pos-readout"]');
+  if (out) {
+    const base = out.getAttribute('data-base') || out.textContent.split(' · 🕒')[0];
+    out.setAttribute('data-base', base);
+    out.textContent = base + ` · 🕒 ${d.toISOString().slice(0,10)} ${hh}:${mm} UTC`;
+  }
 });
 </script>
 </body>

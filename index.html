@@ -1307,6 +1307,20 @@ function bookCard(book, S){
 }
 
 function render(){
+  // El panel se repintaba cada 5 s aunque nada cambiase, y eso movia el grafico y el scroll que
+  // el owner estaba mirando. Se calcula una firma barata del libro: si no cambia y han pasado
+  // menos de 45 s, no se toca el DOM (solo se actualiza el reloj de "datos").
+  try {
+    const _S = STATE || {};
+    const _sig = Object.keys(_S.book || {}).map(k => {
+      const b = _S.book[k] || {};
+      return k + (b.open || 0) + (b.closed || 0) + Math.round((b.realized || 0) * 100) +
+             ((b.positions || []).length);
+    }).join('|');
+    const _ahora = Date.now();
+    if (_sig === window.__sig && (_ahora - (window.__sigAt || 0)) < 45000) return;
+    window.__sig = _sig; window.__sigAt = _ahora;
+  } catch (e) { /* si falla, se repinta como antes */ }
   // El panel se repinta cada 5 s y el scroll se perdia en cada vuelta. Se guarda la posicion de
   // la ventana y la de cada contenedor con id, se repinta y se devuelve todo a su sitio en el
   // siguiente frame (cuando el DOM ya tiene las alturas nuevas).
@@ -1750,7 +1764,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* Al tocar el grafico de una posicion, decir tambien CUANDO fue esa marca. Antes solo daba el
    valor; sin la hora no se puede saber si el pico fue hace 5 minutos o hace 4 horas. */
-document.addEventListener('click', (ev) => {
+document.addEventListener('pointerdown', (ev) => {
   const svg = ev.target.closest && ev.target.closest('svg[data-chart="pos"]');
   if (!svg) return;
   const pid = svg.getAttribute('data-pid');

@@ -1272,7 +1272,14 @@ function bookCard(book, S){
     + `<div class="book-sub">${isSol
         ? 'Jupiter · ticket 5 € · salida 8 h o devolver 25 % desde el pico · puerta: mint, freeze, transfer hooks, liquidez'
         : isSolP
-        ? 'misma compra y mismo instante que ◎ SOL, pero con reloj de 20 h y sin firmar: sirve para comparar horizontes'
+        ? (book === 'solpaper' ? 'misma compra que ◎ SOL, reloj 20 h, sin filtro ni trailing'
+          : book === 'solpaper8' ? 'misma compra, reloj 8 h, sin filtro: control del 8h'
+          : book === 'solpaper8f' ? 'reloj 8 h + filtro (holder <13 %, subida 1h <60 %)'
+          : book === 'solpaper8x' ? 'filtro + venta del 50 % al duplicar y trailing del resto'
+          : book === 'solpaper3' ? 'cierra al tercer toque del pico, con beneficio'
+          : book === 'solpaper6' ? 'solo pools de 6-24 h, fuente propia'
+          : book === 'solgen' ? 'estrategia que reescribe el agente cada 2 h'
+          : 'libro de papel de Solana')
         : isLive
         ? 'ejecucion REAL on-chain · ticket 5 € · salida 24 h · tope 22 posiciones · compra a los 90 min de la decision'
         : isScr

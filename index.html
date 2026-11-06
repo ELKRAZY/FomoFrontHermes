@@ -311,7 +311,7 @@ let CAND_FILTER = 'all';
    seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
-const MODELS = [['solpaperxd', '📄 SOL 8h XD'], ['solgen', '🧪 GEN · 2h'], ['solpaper8x', '◎ SOL 8h DOBLE'], ['solpaper8f', '◎ SOL 8h FILTRO'], ['solpaper6', '◎ SOL 6-12h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper', '◎ SOL papel 20h'], ['sol', '◎ SOL real'], ['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
+const MODELS = [['solpaperxd', '📄 SOL 8h XD'], ['solgen', '🧪 GEN · 2h'], ['solpaper8x', '◎ SOL 8h DOBLE'], ['solpaper8f', '◎ SOL 8h FILTRO'], ['solpaper6', '◎ SOL 6-12h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper', '◎ SOL papel 20h'], ['sol', '◎ SOL real'], ['solxd', '◎ SOL real XD'], ['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
@@ -1263,6 +1263,7 @@ function bookCard(book, S){
         : book === 'solpaper' ? '📄 SOL 20h · control'
         : book === 'solpaper8' ? '📄 SOL 8h · control'
         : book === 'solpaper8f' ? '📄 SOL 8h · filtro'
+        : book === 'solxd' ? '◎ SOL real · XD (8h + doble)'
         : book === 'solpaper8x' ? '📄 SOL 8h · filtro + doble'
         : book === 'solpaperxd' ? '📄 SOL 8h · XD (contabilidad a cero)'
         : book === 'solpaper3' ? '📄 SOL · 3 toques'

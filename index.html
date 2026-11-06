@@ -179,12 +179,13 @@ details.p summary::-webkit-details-marker{color:var(--ac)}
 
   /* Selector de modelos: en PC entraban todos los libros y los ultimos quedaban
      fuera de la pantalla. Ahora la fila se desplaza en horizontal y se ven todos. */
-  #seg-model{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;
+  #seg-model{display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:100%;overflow-x:auto;
              gap:4px;padding-bottom:4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
   #seg-model > button{flex:0 0 auto;white-space:nowrap}
   #seg-model::-webkit-scrollbar{height:6px}
   #seg-model::-webkit-scrollbar-thumb{background:#374151;border-radius:3px}
-  @media (min-width:1100px){ #seg-model{flex-wrap:wrap;overflow-x:visible} }
+  #seg-model .mrow{display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:100%}
+  #seg-model .mtag{font:9px ui-monospace,monospace;color:#6b7280;padding:2px 5px;border-left:2px solid #374151;margin-right:2px}
 </style>
 </head>
 <body>
@@ -338,9 +339,9 @@ function paintModels(){
   };
   const _live = MODELS.filter(m => m[0] === 'live' || m[0] === 'sol' || m[0] === 'solxd');
   const _paper = MODELS.filter(m => m[0] !== 'live' && m[0] !== 'sol');
-  sm.innerHTML = _live.map(chip).join('')
-    + `<span style="font:9px ui-monospace,monospace;color:#6b7280;align-self:center;padding:2px 5px;border-left:1px solid #374151;margin-left:4px">PAPEL</span>`
-    + _paper.map(chip).join('');
+  sm.innerHTML =
+    '<div class="mrow">' + _live.map(chip).join('') + '</div>'
+    + '<div class="mrow"><span class="mtag">PAPEL</span>' + _paper.map(chip).join('') + '</div>';
 }
 
 let PERIOD = 'epoch';

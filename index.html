@@ -336,7 +336,7 @@ function paintModels(){
     const label = (k === 'screened') ? gateLabel() : l;   /* nombre real de la puerta */
     return `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${label}</button>`;
   };
-  const _live = MODELS.filter(m => m[0] === 'live' || m[0] === 'sol');
+  const _live = MODELS.filter(m => m[0] === 'live' || m[0] === 'sol' || m[0] === 'solxd');
   const _paper = MODELS.filter(m => m[0] !== 'live' && m[0] !== 'sol');
   sm.innerHTML = _live.map(chip).join('')
     + `<span style="font:9px ui-monospace,monospace;color:#6b7280;align-self:center;padding:2px 5px;border-left:1px solid #374151;margin-left:4px">PAPEL</span>`
@@ -1243,7 +1243,7 @@ function svgLocal(el, ev){
 function bookCard(book, S){
   const b = (S.book || {})[book];
   if (!b) return '';
-  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw', isLive = book === 'live', isSol = book === 'sol', isSolP = book.indexOf('solpaper') === 0;
+  const isScr = book === 'screened', isTrail = book === 'trail', isFork = book === 'fork', isAlt = book === 'alt', isNm = book === 'nomoney', isCw = book === 'ctrlw', isLive = book === 'live', isSol = (book === 'sol' || book === 'solxd'), isSolP = book.indexOf('solpaper') === 0;
   const P = b.positions || [];
   let nWin = 0, nLoss = 0, nOpen = 0;
   for (const p of P){ const k = PF_BUCKET(p); if (k==='win') nWin++; else if (k==='loss') nLoss++; else nOpen++; }

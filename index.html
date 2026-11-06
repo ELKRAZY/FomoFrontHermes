@@ -176,6 +176,15 @@ code{font:11px var(--mo);background:var(--pa2);padding:2px 5px;border-radius:4px
 }
 @media(max-width:380px){.g-kpi{grid-template-columns:1fr}}
 details.p summary::-webkit-details-marker{color:var(--ac)}
+
+  /* Selector de modelos: en PC entraban todos los libros y los ultimos quedaban
+     fuera de la pantalla. Ahora la fila se desplaza en horizontal y se ven todos. */
+  #seg-model{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;max-width:100%;
+             gap:4px;padding-bottom:4px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  #seg-model > button{flex:0 0 auto;white-space:nowrap}
+  #seg-model::-webkit-scrollbar{height:6px}
+  #seg-model::-webkit-scrollbar-thumb{background:#374151;border-radius:3px}
+  @media (min-width:1100px){ #seg-model{flex-wrap:wrap;overflow-x:visible} }
 </style>
 </head>
 <body>

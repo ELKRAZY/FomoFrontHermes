@@ -338,7 +338,7 @@ function paintModels(){
     return `<button class="${MODEL === k ? 'on' : ''}" onclick="setModel('${k}')">${label}</button>`;
   };
   const _live = MODELS.filter(m => m[0] === 'live' || m[0] === 'sol' || m[0] === 'solxd');
-  const _paper = MODELS.filter(m => m[0] !== 'live' && m[0] !== 'sol');
+  const _paper = MODELS.filter(m => m[0] !== 'live' && m[0] !== 'sol' && m[0] !== 'solxd');
   sm.innerHTML =
     '<div class="mrow">' + _live.map(chip).join('') + '</div>'
     + '<div class="mrow"><span class="mtag">PAPEL</span>' + _paper.map(chip).join('') + '</div>';

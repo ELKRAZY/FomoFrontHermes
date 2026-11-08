@@ -312,7 +312,7 @@ let CAND_FILTER = 'all';
    seguidas: el dueño pidio poder elegir (6 patas / control / trailing) y que el grafico siga a lo
    elegido. Se recuerda en localStorage para que al reabrir siga en el suyo. */
 let MODEL = (function(){ try { return localStorage.getItem('fomo_model') || 'control'; } catch(e){ return 'control'; } })();
-const MODELS = [['solpaperxd', '📄 SOL 8h XD'], ['solgen', '🧪 GEN · 2h'], ['solpaper8x', '◎ SOL 8h DOBLE'], ['solpaper8f', '◎ SOL 8h FILTRO'], ['solpaper6', '◎ SOL 6-12h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper', '◎ SOL papel 20h'], ['sol', '◎ SOL real'], ['solxd', '◎ SOL real XD'], ['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
+const MODELS = [['solpaperxd', '📄 SOL 8h XD'], ['solpaperxds', '📄 SOL XD · slip'], ['solgen', '🧪 GEN · 2h'], ['solpaper8x', '◎ SOL 8h DOBLE'], ['solpaper8f', '◎ SOL 8h FILTRO'], ['solpaper6', '◎ SOL 6-12h'], ['solpaper3', '◎ SOL 3 toques'], ['solpaper8', '◎ SOL papel 8h'], ['solpaper', '◎ SOL papel 20h'], ['sol', '◎ SOL real'], ['solxd', '◎ SOL real XD'], ['live', '💶 LIVE'], ['screened', '6 patas'], ['control', 'control'], ['ctrlw', '👛 wallet'], ['trail', 'trailing'], ['fork', '🧬 fork control'], ['alt', '🧯 solvencia'], ['nomoney', '💸 sin dinero']];
 /* El nombre de la puerta NO se escribe a mano: sale del estado publicado (gate.legs). El 2026-10-27
    la puerta paso de 6 patas a 1 con veto solo en fail medido y el front siguio diciendo "6 patas"
    mientras el libro abria posiciones; el dueno lo detecto antes que nosotros. */
@@ -1268,6 +1268,7 @@ function bookCard(book, S){
         : book === 'solxd' ? '◎ SOL real · XD (8h + doble)'
         : book === 'solpaper8x' ? '📄 SOL 8h · filtro + doble'
         : book === 'solpaperxd' ? '📄 SOL 8h · XD (contabilidad a cero)'
+        : book === 'solpaperxds' ? '📄 SOL XD · slip'
         : book === 'solpaper3' ? '📄 SOL · 3 toques'
         : book === 'solpaper6' ? '📄 SOL 6-24h'
         : book === 'solgen' ? '📄 GEN · itera 2h'
@@ -1290,6 +1291,7 @@ function bookCard(book, S){
           : book === 'solpaper8f' ? 'reloj 8 h + filtro (holder <13 %, subida 1h <60 %)'
           : book === 'solpaper8x' ? 'filtro + venta del 50 % al duplicar y trailing del resto'
           : book === 'solpaperxd' ? 'misma regla que 8h DOBLE, P&L contado desde cero'
+          : book === 'solpaperxds' ? 'misma regla que solxd, con slippage, fee y renta'
           : book === 'solpaper3' ? 'cierra al tercer toque del pico, con beneficio'
           : book === 'solpaper6' ? 'solo pools de 6-24 h, fuente propia'
           : book === 'solgen' ? 'estrategia que reescribe el agente cada 2 h'
@@ -1459,7 +1461,7 @@ function renderCore(){
   // El KPI sigue al selector de periodo: con Hoy/7d/30d usa el resultado de esa ventana, no el
   // total de la epoca. Y entran TODOS los libros (faltaban alt y nomoney).
   const _pk = (PERIOD && PERIOD !== 'epoch') ? PERIOD : 'epoch';
-  const _books = ['live','sol','control','ctrlw','screened','trail','fork','alt','nomoney','solpaper','solpaper8','solpaper3','solpaper6','solpaper8f','solpaper8x','solgen']
+  const _books = ['live','sol','control','ctrlw','screened','trail','fork','alt','nomoney','solpaper','solpaper8','solpaper3','solpaper6','solpaper8f','solpaper8x','solpaperxd','solpaperxds','solgen']
     .map(k => {
       const b = BK[k] || {};
       const per = (b.periods || {})[_pk] || {};
